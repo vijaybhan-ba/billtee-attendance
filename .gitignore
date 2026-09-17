@@ -5,3 +5,4 @@ faces/*.jpg
 captures/*.jpg
 backups/*.json
 .venv/
+vendor/
