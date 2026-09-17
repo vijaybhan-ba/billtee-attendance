@@ -1,9 +1,10 @@
-# Attendance 2026-27
+# Billtee Attendance 2026-27
 
 Python attendance system (Flask + OpenCV) for 8 employees with a
 **3-days-in-office / 3-days-outside** rotation and **face-capture / fingerprint** check-in.
+The company name is configurable in **Settings**, so the same project works for any company.
 
-🔗 GitHub: https://github.com/YOUR-USERNAME/attendance-2026-27  ← *replace with your link (also editable in the app's Settings page)*
+🔗 GitHub: https://github.com/YOUR-USERNAME/billtee-attendance  ← *replace with your link (also editable in the app's Settings page)*
 
 ## Employees (year 2026-27)
 
@@ -57,11 +58,12 @@ python app.py            # http://localhost:5000
 
 ## Push to your GitHub (new project)
 
-1. On GitHub create a **new empty repository** named `attendance-2026-27`.
+1. On GitHub create a **new empty repository** (suggested: `billtee-attendance`,
+   or for another company e.g. `smart-attendance-2026-27`, `hybrid-attendance-pro`).
 2. Then:
 
 ```bash
-git remote add origin https://github.com/YOUR-USERNAME/attendance-2026-27.git
+git remote add origin https://github.com/YOUR-USERNAME/billtee-attendance.git
 git branch -M main
 git push -u origin main
 ```

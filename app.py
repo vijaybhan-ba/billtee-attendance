@@ -38,7 +38,8 @@ DEFAULT_EMPLOYEES = ["Ajit", "Shyam", "Nikhat", "Nitish",
                      "Manish", "Anshuman", "Sarad", "Vijay"]
 
 DEFAULT_CONFIG = {
-    "github_link": "https://github.com/YOUR-USERNAME/attendance-2026-27",
+    "company_name": "Billtee",
+    "github_link": "https://github.com/YOUR-USERNAME/billtee-attendance",
     "cycle_start": "2026-04-01",   # day 1 of the 6-day rotation (3 in / 3 out)
     "year_label": "2026-27",
 }
@@ -197,6 +198,7 @@ def settings_page():
     cfg = load_config()
     msg = None
     if request.method == "POST":
+        cfg["company_name"] = request.form.get("company_name", "").strip() or cfg["company_name"]
         cfg["github_link"] = request.form.get("github_link", "").strip() or cfg["github_link"]
         cfg["cycle_start"] = request.form.get("cycle_start", "").strip() or cfg["cycle_start"]
         save_config(cfg)
@@ -376,7 +378,7 @@ def add_month_sheet(wb, month, cfg):
     grid, emps = build_grid(month)
 
     ws = wb.create_sheet(title=f"{calendar.month_abbr[m]}-{y}")
-    ws["A1"] = f"Attendance {cfg['year_label']} — {calendar.month_name[m]} {y}"
+    ws["A1"] = f"{cfg['company_name']} Attendance {cfg['year_label']} — {calendar.month_name[m]} {y}"
     ws["A1"].font = Font(bold=True, size=14)
     ws["A2"] = cfg["github_link"]
     ws["A2"].font = Font(italic=True, color="666666")

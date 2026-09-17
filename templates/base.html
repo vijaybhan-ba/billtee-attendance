@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Attendance {{ cfg.year_label }}</title>
+<title>{{ cfg.company_name }} Attendance {{ cfg.year_label }}</title>
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
 <header>
-  <h1>🗓️ Attendance {{ cfg.year_label }}</h1>
+  <h1>🗓️ {{ cfg.company_name }} Attendance {{ cfg.year_label }}</h1>
   <nav>
     <a href="/">Dashboard</a>
     <a href="/checkin">Check-In</a>
