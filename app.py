@@ -303,7 +303,8 @@ def build_grid(month):
     ndays = calendar.monthrange(y, m)[1]
     conn = get_db()
     emps = conn.execute("SELECT * FROM employees ORDER BY id").fetchall()
-    rows = conn.execute("SELECT employee_id, day, method, location FROM attendance")
+    rows = conn.execute(
+        "SELECT employee_id, day, method, location, checkin_time FROM attendance")
     mark = {(r["employee_id"], r["day"]): r for r in rows}
     conn.close()
     grid = []
