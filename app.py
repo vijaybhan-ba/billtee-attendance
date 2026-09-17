@@ -19,7 +19,8 @@ from io import BytesIO
 
 import cv2
 import numpy as np
-from flask import Flask, jsonify, render_template, request, send_file
+from flask import (Flask, jsonify, render_template, request, send_file,
+                   send_from_directory)
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill
 
@@ -28,6 +29,7 @@ DB_PATH = os.path.join(BASE, "attendance.db")
 CONFIG_PATH = os.path.join(BASE, "config.json")
 FACES_DIR = os.path.join(BASE, "faces")
 CAPTURES_DIR = os.path.join(BASE, "captures")
+BACKUPS_DIR = os.path.join(BASE, "backups")
 
 CASCADE = cv2.CascadeClassifier(
     os.path.join(cv2.data.haarcascades, "haarcascade_frontalface_default.xml"))
@@ -54,6 +56,7 @@ def get_db():
 def init_db():
     os.makedirs(FACES_DIR, exist_ok=True)
     os.makedirs(CAPTURES_DIR, exist_ok=True)
+    os.makedirs(BACKUPS_DIR, exist_ok=True)
     conn = get_db()
     conn.execute("""CREATE TABLE IF NOT EXISTS employees(
         id INTEGER PRIMARY KEY,
@@ -169,8 +172,11 @@ def reports_page():
     cfg = load_config()
     month = request.args.get("month", date.today().strftime("%Y-%m"))
     grid, emps = build_grid(month)
+    backups = sorted((f for f in os.listdir(BACKUPS_DIR) if f.endswith(".json")),
+                     reverse=True) if os.path.isdir(BACKUPS_DIR) else []
     return render_template("reports.html", cfg=cfg, month=month, grid=grid,
-                           emps=emps, month_name=month_title(month))
+                           emps=emps, month_name=month_title(month),
+                           prev_month=shift_month(month, -1), backups=backups)
 
 
 @app.route("/settings", methods=["GET", "POST"])
@@ -298,6 +304,14 @@ def month_title(month):
     return f"{calendar.month_name[m]} {y}"
 
 
+def shift_month(month, delta):
+    y, m = (int(x) for x in month.split("-"))
+    m += delta
+    y += (m - 1) // 12
+    m = (m - 1) % 12 + 1
+    return f"{y:04d}-{m:02d}"
+
+
 def build_grid(month):
     y, m = (int(x) for x in month.split("-"))
     ndays = calendar.monthrange(y, m)[1]
@@ -327,17 +341,13 @@ def build_grid(month):
     return grid, emps
 
 
-@app.route("/api/report/xlsx")
-def report_xlsx():
-    cfg = load_config()
-    month = request.args.get("month", date.today().strftime("%Y-%m"))
+def add_month_sheet(wb, month, cfg):
+    """One styled worksheet per month."""
     y, m = (int(x) for x in month.split("-"))
     ndays = calendar.monthrange(y, m)[1]
     grid, emps = build_grid(month)
 
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "Attendance"
+    ws = wb.create_sheet(title=f"{calendar.month_abbr[m]}-{y}")
     ws["A1"] = f"Attendance {cfg['year_label']} — {calendar.month_name[m]} {y}"
     ws["A1"].font = Font(bold=True, size=14)
     ws["A2"] = cfg["github_link"]
@@ -365,14 +375,68 @@ def report_xlsx():
         r = ws.max_row
         for i, c in enumerate(g["cells"], start=4):
             ws.cell(row=r, column=i).fill = fills[c["cls"]]
-
     ws.column_dimensions["B"].width = 14
+    return ws
+
+
+@app.route("/api/report/xlsx")
+def report_xlsx():
+    cfg = load_config()
+    month = request.args.get("month", date.today().strftime("%Y-%m"))
+    two = request.args.get("months") == "2"
+    months = [shift_month(month, -1), month] if two else [month]
+
+    wb = Workbook()
+    wb.remove(wb.active)
+    for mo in months:
+        add_month_sheet(wb, mo, cfg)
+
     buf = BytesIO()
     wb.save(buf)
     buf.seek(0)
+    name = (f"attendance_{months[0]}_to_{months[-1]}.xlsx" if two
+            else f"attendance_{month}.xlsx")
     return send_file(
-        buf, as_attachment=True, download_name=f"attendance_{month}.xlsx",
+        buf, as_attachment=True, download_name=name,
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+
+@app.route("/api/backup")
+def backup():
+    """2-month backup (selected month + previous): JSON with employees and
+    attendance; a copy is kept on disk in backups/."""
+    cfg = load_config()
+    month = request.args.get("month", date.today().strftime("%Y-%m"))
+    months = [shift_month(month, -1), month]
+    conn = get_db()
+    employees = [dict(r) for r in conn.execute(
+        "SELECT * FROM employees ORDER BY id")]
+    att = [dict(r) for r in conn.execute(
+        "SELECT * FROM attendance WHERE substr(day,1,7) IN (?,?) "
+        "ORDER BY day, employee_id", months)]
+    conn.close()
+    payload = {
+        "type": "attendance-backup",
+        "year_label": cfg["year_label"],
+        "github_link": cfg["github_link"],
+        "generated_at": datetime.now().isoformat(timespec="seconds"),
+        "months": months,
+        "employees": employees,
+        "attendance": att,
+    }
+    fname = f"backup_{date.today().isoformat()}_{month}.json"
+    with open(os.path.join(BACKUPS_DIR, fname), "w") as fh:
+        json.dump(payload, fh, indent=2)
+    return send_file(os.path.join(BACKUPS_DIR, fname), as_attachment=True,
+                     download_name=fname, mimetype="application/json")
+
+
+@app.route("/api/backup/download")
+def backup_download():
+    name = os.path.basename(request.args.get("name", ""))
+    if not name.startswith("backup_") or not name.endswith(".json"):
+        return jsonify(error="Not a backup file"), 400
+    return send_from_directory(BACKUPS_DIR, name, as_attachment=True)
 
 
 if __name__ == "__main__":

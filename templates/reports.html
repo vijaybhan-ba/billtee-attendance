@@ -6,8 +6,16 @@
 <form method="get" class="row" style="margin-bottom:16px">
   <input type="month" name="month" value="{{ month }}">
   <button class="primary">Show</button>
-  <a href="/api/report/xlsx?month={{ month }}"><button type="button">⬇️ Export Excel (.xlsx)</button></a>
 </form>
+
+<div class="card">
+  <b>Export &amp; backup ({{ prev_month }} + {{ month }})</b>
+  <div class="row">
+    <a href="/api/report/xlsx?month={{ month }}"><button>⬇️ Excel — 1 month</button></a>
+    <a href="/api/report/xlsx?month={{ month }}&months=2"><button class="primary">⬇️ Excel — 2 months</button></a>
+    <a href="/api/backup?month={{ month }}"><button>💾 Backup — 2 months (JSON)</button></a>
+  </div>
+</div>
 
 <table style="font-size:.8rem">
   <tr>
@@ -28,4 +36,16 @@
   </tr>
   {% endfor %}
 </table>
+
+<h3>Saved backups (kept on disk in <code>backups/</code>)</h3>
+{% if backups %}
+<table>
+  <tr><th>Backup file</th><th class="c">Download</th></tr>
+  {% for b in backups %}
+  <tr><td>{{ b }}</td><td class="c"><a href="/api/backup/download?name={{ b }}">⬇️ download</a></td></tr>
+  {% endfor %}
+</table>
+{% else %}
+<p class="sub">No backups yet — click “💾 Backup — 2 months” above.</p>
+{% endif %}
 {% endblock %}

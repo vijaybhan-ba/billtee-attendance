@@ -3,4 +3,5 @@ __pycache__/
 *.db
 faces/*.jpg
 captures/*.jpg
+backups/*.json
 .venv/

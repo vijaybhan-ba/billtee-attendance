@@ -49,7 +49,9 @@ python app.py            # http://localhost:5000
 * **Dashboard** – today's duty roster (Office/Outside) and who has checked in.
 * **Check-In** – face capture / fingerprint / manual marking.
 * **Employees** – teams, fingerprint codes, face enrollment.
-* **Reports** – monthly grid (IN / OUT / absent) + **Excel (.xlsx) export**.
+* **Reports** – monthly grid (IN / OUT / absent) + **Excel (.xlsx) export**
+  (1 month or **2 months**, one sheet per month) + **2-month backup** as JSON,
+  with every backup kept on disk in `backups/` and re-downloadable from the page.
 * **Settings** – your GitHub link and rotation start date.
 
 ## Push to your GitHub (new project)
