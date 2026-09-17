@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Reports — {{ month_name }}</h2>
+<p class="sub">IN = present in office · OUT = present outside · — = absent</p>
+
+<form method="get" class="row" style="margin-bottom:16px">
+  <input type="month" name="month" value="{{ month }}">
+  <button class="primary">Show</button>
+  <a href="/api/report/xlsx?month={{ month }}"><button type="button">⬇️ Export Excel (.xlsx)</button></a>
+</form>
+
+<table style="font-size:.8rem">
+  <tr>
+    <th>#</th><th>Employee</th>
+    {% for d in range(1, grid[0].cells|length + 1) %}<th class="c">{{ d }}</th>{% endfor %}
+    <th class="c">P</th><th class="c">Off</th><th class="c">Out</th><th class="c">Abs</th>
+  </tr>
+  {% for g in grid %}
+  <tr>
+    <td>{{ g.emp.id }}</td><td>{{ g.emp.name }}</td>
+    {% for c in g.cells %}
+    <td class="c {{ c.cls }}" title="{{ c.title }}">{{ c.v }}</td>
+    {% endfor %}
+    <td class="c"><b>{{ g.counts.Present }}</b></td>
+    <td class="c">{{ g.counts.Office }}</td>
+    <td class="c">{{ g.counts.Outside }}</td>
+    <td class="c">{{ g.counts.Absent }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% endblock %}

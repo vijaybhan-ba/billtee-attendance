@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Attendance {{ cfg.year_label }}</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<header>
+  <h1>🗓️ Attendance {{ cfg.year_label }}</h1>
+  <nav>
+    <a href="/">Dashboard</a>
+    <a href="/checkin">Check-In</a>
+    <a href="/employees">Employees</a>
+    <a href="/reports">Reports</a>
+    <a href="/settings">Settings</a>
+  </nav>
+</header>
+<main>
+{% block content %}{% endblock %}
+</main>
+<footer>
+  <span>Rotation: 3 days in office • 3 days outside</span>
+  <a href="{{ cfg.github_link }}" target="_blank" rel="noopener">GitHub project ↗</a>
+</footer>
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

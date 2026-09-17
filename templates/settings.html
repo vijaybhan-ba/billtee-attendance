@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Settings</h2>
+<p class="sub">Your GitHub link appears in the footer and on exported Excel reports.</p>
+
+<div class="card" style="max-width:560px">
+  {% if msg %}<p class="msg ok">{{ msg }}</p>{% endif %}
+  <form method="post">
+    <label for="github_link">GitHub link (your new project)</label>
+    <input id="github_link" name="github_link" value="{{ cfg.github_link }}" style="width:100%">
+    <div style="height:14px"></div>
+    <label for="cycle_start">Rotation cycle start date (day 1 = Team A in office)</label>
+    <input id="cycle_start" name="cycle_start" type="date" value="{{ cfg.cycle_start }}">
+    <div class="row">
+      <button class="primary">Save settings</button>
+    </div>
+  </form>
+</div>
+
+<div class="card" style="max-width:560px">
+  <h3>Push this project to your GitHub</h3>
+  <p style="margin-top:8px; line-height:1.6">
+    Create a <b>new empty repository</b> on GitHub (name it
+    <code>attendance-2026-27</code>), then run inside the project folder:
+  </p>
+  <pre style="background:#101826;color:#cfe3ff;border-radius:8px;padding:12px;margin-top:10px;overflow:auto">git remote add origin https://github.com/YOUR-USERNAME/attendance-2026-27.git
+git branch -M main
+git push -u origin main</pre>
+</div>
+{% endblock %}

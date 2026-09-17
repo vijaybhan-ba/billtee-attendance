@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Employees</h2>
+<p class="sub">Move people between Team A / Team B (rotation), set fingerprint codes, enroll faces.</p>
+
+<table>
+  <tr>
+    <th class="c">#</th><th>Name</th><th class="c">Team</th>
+    <th>Fingerprint code</th><th class="c">Face enrolled</th><th class="c">Save</th>
+  </tr>
+  {% for e in emps %}
+  <tr>
+    <td class="c">{{ e.id }}</td>
+    <td>{{ e.name }}</td>
+    <td class="c">
+      <select id="grp-{{ e.id }}">
+        <option value="A" {{ 'selected' if e.grp == 'A' }}>A</option>
+        <option value="B" {{ 'selected' if e.grp == 'B' }}>B</option>
+      </select>
+    </td>
+    <td><input id="fp-{{ e.id }}" value="{{ e.fp_code or '' }}" style="width:120px"></td>
+    <td class="c">{{ '✅' if e.face_enrolled else '—' }}</td>
+    <td class="c"><button onclick="saveEmp({{ e.id }})">Save</button></td>
+  </tr>
+  {% endfor %}
+</table>
+
+<h3>Enroll a face (face capture)</h3>
+<div class="card">
+  <label for="enroll-emp">Employee</label>
+  <select id="enroll-emp">
+    {% for e in emps %}
+    <option value="{{ e.id }}">{{ e.id }}. {{ e.name }}</option>
+    {% endfor %}
+  </select>
+  <video id="cam" autoplay playsinline muted></video>
+  <div class="row">
+    <button onclick="camStart('cam').catch(e => showMsg('emsg', e.message, false))">🎥 Start Camera</button>
+    <button class="primary" onclick="enroll()">📸 Capture &amp; Enroll Face</button>
+  </div>
+  <p class="msg" id="emsg"></p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function saveEmp(id) {
+  const r = await postJSON("/api/employee", {
+    employee_id: id,
+    grp: document.getElementById("grp-" + id).value,
+    fp_code: document.getElementById("fp-" + id).value,
+  });
+  alert(r.ok ? "Saved." : (r.error || "Failed."));
+}
+async function enroll() {
+  try {
+    const img = grabFrame("cam");
+    const r = await postJSON("/api/enroll",
+      { employee_id: +document.getElementById("enroll-emp").value, image: img });
+    showMsg("emsg", r.ok ? `✔ Face enrolled for ${r.name}.` : (r.error || "Failed."), !!r.ok);
+    if (r.ok) setTimeout(() => location.reload(), 900);
+  } catch (e) { showMsg("emsg", "Camera not started or blocked.", false); }
+}
+</script>
+{% endblock %}

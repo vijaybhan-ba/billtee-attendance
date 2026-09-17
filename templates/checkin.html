@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Check-In — {{ today.isoformat() }}</h2>
+<p class="sub">Mark attendance with a face capture or a fingerprint code.</p>
+
+<div class="card">
+  <label for="emp">Employee</label>
+  <select id="emp" onchange="refreshDuty()">
+    {% for e in emps %}
+    <option value="{{ e.id }}">{{ e.id }}. {{ e.name }}</option>
+    {% endfor %}
+  </select>
+  <p class="msg" id="duty"></p>
+
+  <video id="cam" autoplay playsinline muted></video>
+  <div class="row">
+    <button onclick="startCam()">🎥 Start Camera</button>
+    <button class="primary" onclick="faceCheckin()">📸 Face Capture Check-In</button>
+  </div>
+  <div class="row">
+    <input id="fp" placeholder="Fingerprint code" inputmode="numeric" style="width:160px">
+    <button onclick="fpCheckin()"> Fingerprint Check-In</button>
+    <button onclick="manualCheckin()">✍️ Manual (no device)</button>
+  </div>
+  <p class="msg" id="msg"></p>
+</div>
+
+<h3>Already checked in today</h3>
+<table>
+  <tr><th class="c">#</th><th>Name</th><th class="c">Time</th><th class="c">Method</th><th class="c">Location</th></tr>
+  {% for d in done %}
+  <tr>
+    <td class="c">{{ d.employee_id }}</td><td>{{ d.name }}</td>
+    <td class="c">{{ d.checkin_time }}</td><td class="c">{{ d.method }}</td>
+    <td class="c"><span class="badge {{ 'office' if d.location == 'Office' else 'outside' }}">{{ d.location }}</span></td>
+  </tr>
+  {% else %}
+  <tr><td colspan="5" class="c">Nobody yet.</td></tr>
+  {% endfor %}
+</table>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function refreshDuty() {
+  const r = await fetch("/api/duty?emp=" + document.getElementById("emp").value).then(r => r.json());
+  const el = document.getElementById("duty");
+  el.textContent = "Today's duty: " + r.location;
+  el.className = "msg ok";
+}
+refreshDuty();
+
+function startCam() {
+  camStart("cam").catch(e => showMsg("msg", e.message || "Camera failed to start.", false));
+}
+async function faceCheckin() {
+  try {
+    const img = grabFrame("cam");
+    const r = await postJSON("/api/checkin",
+      { employee_id: +document.getElementById("emp").value, method: "face", image: img });
+    showMsg("msg", r.ok ? `✔ ${r.name} present (${r.location}) at ${r.time}.` : (r.error || "Failed."), !!r.ok);
+    if (r.ok) setTimeout(() => location.reload(), 900);
+  } catch (e) { showMsg("msg", "Camera not started or blocked — use fingerprint/manual.", false); }
+}
+async function fpCheckin() {
+  const r = await postJSON("/api/checkin",
+    { employee_id: +document.getElementById("emp").value,
+      method: "fingerprint", fp_code: document.getElementById("fp").value });
+  showMsg("msg", r.ok ? `✔ ${r.name} present (${r.location}) at ${r.time}.` : (r.error || "Failed."), !!r.ok);
+  if (r.ok) setTimeout(() => location.reload(), 900);
+}
+async function manualCheckin() {
+  const r = await postJSON("/api/checkin",
+    { employee_id: +document.getElementById("emp").value, method: "manual" });
+  showMsg("msg", r.ok ? `✔ ${r.name} present (${r.location}) at ${r.time}.` : (r.error || "Failed."), !!r.ok);
+  if (r.ok) setTimeout(() => location.reload(), 900);
+}
+</script>
+{% endblock %}
