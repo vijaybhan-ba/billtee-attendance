@@ -45,7 +45,7 @@
 async function refreshDuty() {
   const r = await fetch("/api/duty?emp=" + document.getElementById("emp").value).then(r => r.json());
   const el = document.getElementById("duty");
-  el.textContent = "Today's duty: " + r.location;
+  el.textContent = "Today's duty: " + r.label;
   el.className = "msg ok";
 }
 refreshDuty();
@@ -58,7 +58,7 @@ async function faceCheckin() {
     const img = grabFrame("cam");
     const r = await postJSON("/api/checkin",
       { employee_id: +document.getElementById("emp").value, method: "face", image: img });
-    showMsg("msg", r.ok ? `✔ ${r.name} present (${r.location}) at ${r.time}.` : (r.error || "Failed."), !!r.ok);
+    showMsg("msg", r.ok ? `✔ ${r.name} present (${r.label}) at ${r.time}.` : (r.error || "Failed."), !!r.ok);
     if (r.ok) setTimeout(() => location.reload(), 900);
   } catch (e) { showMsg("msg", "Camera not started or blocked — use fingerprint/manual.", false); }
 }
@@ -66,13 +66,13 @@ async function fpCheckin() {
   const r = await postJSON("/api/checkin",
     { employee_id: +document.getElementById("emp").value,
       method: "fingerprint", fp_code: document.getElementById("fp").value });
-  showMsg("msg", r.ok ? `✔ ${r.name} present (${r.location}) at ${r.time}.` : (r.error || "Failed."), !!r.ok);
+  showMsg("msg", r.ok ? `✔ ${r.name} present (${r.label}) at ${r.time}.` : (r.error || "Failed."), !!r.ok);
   if (r.ok) setTimeout(() => location.reload(), 900);
 }
 async function manualCheckin() {
   const r = await postJSON("/api/checkin",
     { employee_id: +document.getElementById("emp").value, method: "manual" });
-  showMsg("msg", r.ok ? `✔ ${r.name} present (${r.location}) at ${r.time}.` : (r.error || "Failed."), !!r.ok);
+  showMsg("msg", r.ok ? `✔ ${r.name} present (${r.label}) at ${r.time}.` : (r.error || "Failed."), !!r.ok);
   if (r.ok) setTimeout(() => location.reload(), 900);
 }
 </script>

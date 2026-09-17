@@ -77,6 +77,11 @@ def init_db():
         conn.execute(
             "INSERT OR IGNORE INTO employees(id, name, grp, fp_code) VALUES(?,?,?,?)",
             (i, name, "A" if i <= 4 else "B", str(1000 + i)))
+    cols = [r["name"] for r in conn.execute("PRAGMA table_info(employees)")]
+    if "office_loc" not in cols:
+        conn.execute("ALTER TABLE employees ADD COLUMN office_loc TEXT")
+        conn.execute("UPDATE employees SET office_loc = "
+                     "CASE grp WHEN 'A' THEN 'Andheri' ELSE 'Ambadi' END")
     conn.commit()
     conn.close()
 
@@ -108,6 +113,13 @@ def scheduled_location(grp, day):
     return "Outside" if a_in_office else "Office"
 
 
+def duty_label(emp, day):
+    loc = scheduled_location(emp["grp"], day)
+    if loc == "Office":
+        return f"Office – {emp['office_loc'] or 'Andheri'}"
+    return "Outside"
+
+
 # ---------------------------------------------------------------- face helpers
 def decode_image(data_url):
     _, b64 = data_url.split(",", 1)
@@ -137,6 +149,7 @@ def dashboard():
         roster.append({
             "emp": e,
             "location": scheduled_location(e["grp"], today),
+            "label": duty_label(e, today),
             "mark": marks.get(e["id"]),
         })
     pos = (today - date.fromisoformat(cfg["cycle_start"])).days % 6
@@ -200,7 +213,8 @@ def api_duty():
     conn.close()
     if not emp:
         return jsonify(error="unknown employee"), 404
-    return jsonify(location=scheduled_location(emp["grp"], date.today()))
+    return jsonify(location=scheduled_location(emp["grp"], date.today()),
+                   label=duty_label(emp, date.today()))
 
 
 @app.route("/api/checkin", methods=["POST"])
@@ -215,6 +229,8 @@ def api_checkin():
         return jsonify(error="Unknown employee"), 404
 
     location = scheduled_location(emp["grp"], date.today())
+    label = (f"Office – {emp['office_loc'] or 'Andheri'}"
+             if location == "Office" else "Outside")
     capture = None
 
     if method == "face":
@@ -252,7 +268,7 @@ def api_checkin():
          method, location, capture))
     conn.commit()
     conn.close()
-    return jsonify(ok=True, name=emp["name"], location=location,
+    return jsonify(ok=True, name=emp["name"], location=location, label=label,
                    time=now.strftime("%H:%M:%S"), method=method)
 
 
@@ -285,14 +301,22 @@ def api_employee():
     emp_id = int(data.get("employee_id", 0))
     grp = data.get("grp")
     fp_code = data.get("fp_code")
+    office_loc = data.get("office_loc")
     if grp not in ("A", "B"):
         return jsonify(error="Group must be A or B"), 400
+    if office_loc is not None and office_loc not in ("Andheri", "Ambadi"):
+        return jsonify(error="Office location must be Andheri or Ambadi"), 400
     conn = get_db()
-    if fp_code is not None:
-        conn.execute("UPDATE employees SET grp = ?, fp_code = ? WHERE id = ?",
-                     (grp, str(fp_code).strip(), emp_id))
-    else:
-        conn.execute("UPDATE employees SET grp = ? WHERE id = ?", (grp, emp_id))
+    emp = conn.execute("SELECT * FROM employees WHERE id = ?", (emp_id,)).fetchone()
+    if not emp:
+        conn.close()
+        return jsonify(error="Unknown employee"), 404
+    conn.execute(
+        "UPDATE employees SET grp = ?, fp_code = ?, office_loc = ? WHERE id = ?",
+        (grp,
+         str(fp_code).strip() if fp_code is not None else emp["fp_code"],
+         office_loc if office_loc is not None else emp["office_loc"],
+         emp_id))
     conn.commit()
     conn.close()
     return jsonify(ok=True)
@@ -331,7 +355,11 @@ def build_grid(month):
             if r:
                 counts["Present"] += 1
                 counts[r["location"]] += 1
-                cells.append({"v": "IN" if r["location"] == "Office" else "OUT",
+                if r["location"] == "Office":
+                    v = "AND" if (e["office_loc"] or "Andheri") == "Andheri" else "AMB"
+                else:
+                    v = "OUT"
+                cells.append({"v": v,
                               "cls": "in" if r["location"] == "Office" else "out",
                               "title": f"{r['method']} @ {r['checkin_time']}"})
             else:
@@ -353,7 +381,8 @@ def add_month_sheet(wb, month, cfg):
     ws["A2"] = cfg["github_link"]
     ws["A2"].font = Font(italic=True, color="666666")
 
-    header = ["No", "Employee", "Team"] + [str(d) for d in range(1, ndays + 1)] + \
+    header = ["No", "Employee", "Team", "Office Location"] + \
+             [str(d) for d in range(1, ndays + 1)] + \
              ["Present", "Office", "Outside", "Absent"]
     ws.append([])
     ws.append(header)
@@ -367,13 +396,14 @@ def add_month_sheet(wb, month, cfg):
              "out": PatternFill("solid", fgColor="BDD7EE"),
              "abs": PatternFill("solid", fgColor="F2DCDB")}
     for g in grid:
-        row = [g["emp"]["id"], g["emp"]["name"], g["emp"]["grp"]]
+        row = [g["emp"]["id"], g["emp"]["name"], g["emp"]["grp"],
+               g["emp"]["office_loc"] or "Andheri"]
         row += [c["v"] for c in g["cells"]]
         row += [g["counts"]["Present"], g["counts"]["Office"],
                 g["counts"]["Outside"], g["counts"]["Absent"]]
         ws.append(row)
         r = ws.max_row
-        for i, c in enumerate(g["cells"], start=4):
+        for i, c in enumerate(g["cells"], start=5):
             ws.cell(row=r, column=i).fill = fills[c["cls"]]
     ws.column_dimensions["B"].width = 14
     return ws

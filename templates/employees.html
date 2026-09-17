@@ -5,7 +5,7 @@
 
 <table>
   <tr>
-    <th class="c">#</th><th>Name</th><th class="c">Team</th>
+    <th class="c">#</th><th>Name</th><th class="c">Team</th><th class="c">Office location</th>
     <th>Fingerprint code</th><th class="c">Face enrolled</th><th class="c">Save</th>
   </tr>
   {% for e in emps %}
@@ -16,6 +16,12 @@
       <select id="grp-{{ e.id }}">
         <option value="A" {{ 'selected' if e.grp == 'A' }}>A</option>
         <option value="B" {{ 'selected' if e.grp == 'B' }}>B</option>
+      </select>
+    </td>
+    <td class="c">
+      <select id="loc-{{ e.id }}">
+        <option value="Andheri" {{ 'selected' if (e.office_loc or 'Andheri') == 'Andheri' }}>Andheri</option>
+        <option value="Ambadi" {{ 'selected' if e.office_loc == 'Ambadi' }}>Ambadi</option>
       </select>
     </td>
     <td><input id="fp-{{ e.id }}" value="{{ e.fp_code or '' }}" style="width:120px"></td>
@@ -49,6 +55,7 @@ async function saveEmp(id) {
     employee_id: id,
     grp: document.getElementById("grp-" + id).value,
     fp_code: document.getElementById("fp-" + id).value,
+    office_loc: document.getElementById("loc-" + id).value,
   });
   alert(r.ok ? "Saved." : (r.error || "Failed."));
 }

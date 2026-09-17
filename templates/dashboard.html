@@ -14,7 +14,7 @@
     <td>{{ r.emp.name }}</td>
     <td class="c">{{ r.emp.grp }}</td>
     <td class="c">
-      <span class="badge {{ 'office' if r.location == 'Office' else 'outside' }}">{{ r.location }}</span>
+      <span class="badge {{ 'office' if r.location == 'Office' else 'outside' }}">{{ r.label }}</span>
     </td>
     <td class="c">{{ '✅' if r.emp.face_enrolled else '—' }}</td>
     <td>

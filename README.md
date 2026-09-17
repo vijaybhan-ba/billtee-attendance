@@ -7,16 +7,16 @@ Python attendance system (Flask + OpenCV) for 8 employees with a
 
 ## Employees (year 2026-27)
 
-| # | Name     | Team |
-|---|----------|------|
-| 1 | Ajit     | A    |
-| 2 | Shyam    | A    |
-| 3 | Nikhat   | A    |
-| 4 | Nitish   | A    |
-| 5 | Manish   | B    |
-| 6 | Anshuman | B    |
-| 7 | Sarad    | B    |
-| 8 | Vijay    | B    |
+| # | Name     | Team | Office location |
+|---|----------|------|-----------------|
+| 1 | Ajit     | A    | Andheri         |
+| 2 | Shyam    | A    | Andheri         |
+| 3 | Nikhat   | A    | Andheri         |
+| 4 | Nitish   | A    | Andheri         |
+| 5 | Manish   | B    | Ambadi          |
+| 6 | Anshuman | B    | Ambadi          |
+| 7 | Sarad    | B    | Ambadi          |
+| 8 | Vijay    | B    | Ambadi          |
 
 ## How the rotation works
 
@@ -25,8 +25,9 @@ A 6-day cycle starts on the **cycle start date** (default `2026-04-01`, changeab
 * Days 1–3 → Team A in **office**, Team B **outside**
 * Days 4–6 → Team B in **office**, Team A **outside**
 
-Every check-in is automatically stamped *Office* or *Outside* according to that
-employee's duty for the day. Teams can be re-assigned per employee on the
+Every check-in is automatically stamped *Office (Andheri/Ambadi)* or *Outside*
+according to that employee's duty for the day. Team A's office is **Andheri**,
+Team B's office is **Ambadi** — editable per employee on the Employees page. Teams can be re-assigned per employee on the
 **Employees** page.
 
 ## Check-in methods
