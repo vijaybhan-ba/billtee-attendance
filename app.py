@@ -39,7 +39,7 @@ DEFAULT_EMPLOYEES = ["Ajit", "Shyam", "Nikhat", "Nitish",
 
 DEFAULT_CONFIG = {
     "company_name": "Billtee",
-    "github_link": "https://github.com/YOUR-USERNAME/billtee-attendance",
+    "github_link": "https://github.com/vijaybhan-ba/billtee-attendance",
     "cycle_start": "2026-04-01",   # day 1 of the 6-day rotation (3 in / 3 out)
     "year_label": "2026-27",
 }

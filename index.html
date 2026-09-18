@@ -71,7 +71,7 @@ let S=load();
 function load(){
   try{const s=JSON.parse(lsGet());if(s&&s.employees)return s;}catch(e){}
   return {
-    config:{company:"Billtee",year:"2026-27",github:"https://github.com/YOUR-USERNAME/billtee-attendance",cycle:"2026-04-01"},
+    config:{company:"Billtee",year:"2026-27",github:"https://github.com/vijaybhan-ba/billtee-attendance",cycle:"2026-04-01"},
     employees:NAMES.map((n,i)=>({id:i+1,name:n,grp:i<4?"A":"B",fp:String(1001+i),loc:i<4?"Andheri":"Ambadi",face:null})),
     attendance:{} // "YYYY-MM-DD": {empId:{time,method,location}}
   };

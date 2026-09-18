@@ -4,7 +4,7 @@ Python attendance system (Flask + OpenCV) for 8 employees with a
 **3-days-in-office / 3-days-outside** rotation and **face-capture / fingerprint** check-in.
 The company name is configurable in **Settings**, so the same project works for any company.
 
-🔗 GitHub: https://github.com/YOUR-USERNAME/billtee-attendance  ← *replace with your link (also editable in the app's Settings page)*
+🔗 GitHub: https://github.com/vijaybhan-ba/billtee-attendance  ← *replace with your link (also editable in the app's Settings page)*
 
 ## Employees (year 2026-27)
 
@@ -63,7 +63,7 @@ python app.py            # http://localhost:5000
 2. Then:
 
 ```bash
-git remote add origin https://github.com/YOUR-USERNAME/billtee-attendance.git
+git remote add origin https://github.com/vijaybhan-ba/billtee-attendance.git
 git branch -M main
 git push -u origin main
 ```
@@ -74,5 +74,5 @@ git push -u origin main
 1. Create the repository `billtee-attendance` on GitHub.
 2. Upload `index.html` (Add file → Upload files → drag it in → Commit).
 3. Repository **Settings → Pages** → Source: *Deploy from a branch* → `main` / `/ (root)` → Save.
-4. Your permanent site is live at `https://YOUR-USERNAME.github.io/billtee-attendance/` —
+4. Your permanent site is live at `https://vijaybhan-ba.github.io/billtee-attendance/` —
    every employee opens the same link on their phone; each device keeps its own data.
