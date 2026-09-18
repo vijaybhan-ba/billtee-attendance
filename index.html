@@ -63,18 +63,22 @@ label{font-weight:600;display:block;margin:8px 0 4px}
 /* ---------- state ---------- */
 const KEY="billtee_attendance_v1";
 const NAMES=["Ajit","Shyam","Nikhat","Nitish","Manish","Anshuman","Sarad","Vijay"];
+let MEM=null;
+function lsGet(){try{return localStorage.getItem(KEY);}catch(e){return MEM;}}
+function lsSet(v){MEM=v;try{localStorage.setItem(KEY,v);}catch(e){}}
+function lsDel(){MEM=null;try{localStorage.removeItem(KEY);}catch(e){}}
 let S=load();
 function load(){
-  try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&s.employees)return s;}catch(e){}
+  try{const s=JSON.parse(lsGet());if(s&&s.employees)return s;}catch(e){}
   return {
     config:{company:"Billtee",year:"2026-27",github:"https://github.com/YOUR-USERNAME/billtee-attendance",cycle:"2026-04-01"},
     employees:NAMES.map((n,i)=>({id:i+1,name:n,grp:i<4?"A":"B",fp:String(1001+i),loc:i<4?"Andheri":"Ambadi",face:null})),
     attendance:{} // "YYYY-MM-DD": {empId:{time,method,location}}
   };
 }
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
+function save(){lsSet(JSON.stringify(S));}
 const $=id=>document.getElementById(id);
-const todayStr=()=>new Date().toISOString().slice(0,10);
+const todayStr=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");};
 function shiftMonth(m,d){let[y,mo]=m.split("-").map(Number);mo+=d;y+=Math.floor((mo-1)/12);mo=((mo-1)%12+12)%12+1;return y+"-"+String(mo).padStart(2,"0");}
 function duty(emp,day){
   const start=new Date(S.config.cycle+"T00:00:00"),d=new Date(day+"T00:00:00");
@@ -189,7 +193,8 @@ function renderRep(){
   <button class="btn" onclick="repCSV(2)">⬇️ Excel CSV — 2 months</button>
   <button class="btn" onclick="backup()">💾 Backup — 2 months (JSON)</button></div>
   <p class="sub">AND = Andheri office · AMB = Ambadi office · OUT = outside · — = absent</p>
-  <div id="rp-grid" style="overflow-x:auto"></div><div id="rp-msg" class="msg"></div>`;
+  <div id="rp-grid" style="overflow-x:auto"></div><div id="rp-msg" class="msg"></div>
+  <pre id="rp-out" style="display:none;max-height:220px;overflow:auto;background:#101826;color:#cfe3ff;border-radius:8px;padding:8px;margin-top:10px;font-size:.7rem"></pre>`;
   repGrid();
 }
 function gridFor(m){
@@ -228,16 +233,20 @@ function monthCSV(m){
   });
   return csv;
 }
+function showOut(text,msg){const o=$("rp-out");if(o){o.style.display="block";o.textContent=text;}
+  const mm=$("rp-msg");mm.textContent=msg;mm.className="msg ok";}
 function repCSV(n){
   const m=$("rp-m").value,months=n===2?[shiftMonth(m,-1),m]:[m];
-  dl(`attendance_${months[0]}${n===2?"_to_"+months[1]:""}.csv`,"text/csv",months.map(monthCSV).join("\n"));
-  $("rp-msg").textContent="CSV downloaded — opens directly in Excel.";$("rp-msg").className="msg ok";
+  const text=months.map(monthCSV).join("\n");
+  dl(`attendance_${months[0]}${n===2?"_to_"+months[1]:""}.csv`,"text/csv",text);
+  showOut(text,"CSV ready — downloaded, or copy it below (paste into Excel).");
 }
 function backup(){
   const m=$("rp-m").value,months=[shiftMonth(m,-1),m];
   const data={};months.forEach(mo=>{Object.keys(S.attendance).forEach(d=>{if(d.startsWith(mo))data[d]=S.attendance[d];});});
-  dl(`backup_${todayStr()}_${m}.json`,"application/json",JSON.stringify({type:"attendance-backup",company:S.config.company,months,employees:S.employees,attendance:data},null,2));
-  $("rp-msg").textContent="Backup JSON downloaded (2 months).";$("rp-msg").className="msg ok";
+  const text=JSON.stringify({type:"attendance-backup",company:S.config.company,months,employees:S.employees,attendance:data},null,2);
+  dl(`backup_${todayStr()}_${m}.json`,"application/json",text);
+  showOut(text,"Backup ready (2 months) — downloaded, or copy below.");
 }
 
 /* ---------- settings ---------- */
@@ -248,7 +257,7 @@ function renderSet(){
   <label>GitHub link</label><input id="st-g" value="${c.github}" style="width:100%">
   <label>Rotation cycle start</label><input id="st-s" type="date" value="${c.cycle}">
   <div class="row"><button class="btn primary" onclick="saveSet()">Save settings</button>
-  <button class="btn" onclick="if(confirm('Reset ALL data?')){localStorage.removeItem(KEY);location.reload();}">Reset data</button></div>
+  <button class="btn" onclick="if(confirm('Reset ALL data?')){lsDel();location.reload();}">Reset data</button></div>
   <p class="msg" id="st-msg"></p></div>`;
 }
 function saveSet(){

@@ -67,3 +67,12 @@ git remote add origin https://github.com/YOUR-USERNAME/billtee-attendance.git
 git branch -M main
 git push -u origin main
 ```
+
+
+## Permanent public site (GitHub Pages) — everyone can use it
+
+1. Create the repository `billtee-attendance` on GitHub.
+2. Upload `index.html` (Add file → Upload files → drag it in → Commit).
+3. Repository **Settings → Pages** → Source: *Deploy from a branch* → `main` / `/ (root)` → Save.
+4. Your permanent site is live at `https://YOUR-USERNAME.github.io/billtee-attendance/` —
+   every employee opens the same link on their phone; each device keeps its own data.
