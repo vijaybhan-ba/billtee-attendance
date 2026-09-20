@@ -6,3 +6,4 @@ captures/*.jpg
 backups/*.json
 .venv/
 vendor/
+.gh_token

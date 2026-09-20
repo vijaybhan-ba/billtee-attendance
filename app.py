@@ -83,6 +83,9 @@ def init_db():
         conn.execute("ALTER TABLE employees ADD COLUMN office_loc TEXT")
         conn.execute("UPDATE employees SET office_loc = "
                      "CASE grp WHEN 'A' THEN 'Andheri' ELSE 'Ambadi' END")
+    acols = [r["name"] for r in conn.execute("PRAGMA table_info(attendance)")]
+    if "branch" not in acols:
+        conn.execute("ALTER TABLE attendance ADD COLUMN branch TEXT")
     conn.commit()
     conn.close()
 
@@ -147,11 +150,16 @@ def dashboard():
     conn.close()
     roster = []
     for e in emps:
+        mk = marks.get(e["id"])
+        loc = scheduled_location(e["grp"], today)
+        reclabel, mismatch = None, False
+        if mk:
+            reclabel = ("Office – " + (mk["branch"] or e["office_loc"] or "Andheri")
+                        if mk["location"] == "Office" else "Outside")
+            mismatch = (mk["location"] == "Office") != (loc == "Office")
         roster.append({
-            "emp": e,
-            "location": scheduled_location(e["grp"], today),
-            "label": duty_label(e, today),
-            "mark": marks.get(e["id"]),
+            "emp": e, "location": loc, "label": duty_label(e, today),
+            "mark": mk, "reclabel": reclabel, "mismatch": mismatch,
         })
     pos = (today - date.fromisoformat(cfg["cycle_start"])).days % 6
     return render_template("dashboard.html", cfg=cfg, today=today,
@@ -216,7 +224,8 @@ def api_duty():
     if not emp:
         return jsonify(error="unknown employee"), 404
     return jsonify(location=scheduled_location(emp["grp"], date.today()),
-                   label=duty_label(emp, date.today()))
+                   label=duty_label(emp, date.today()),
+                   loc=emp["office_loc"] or "Andheri")
 
 
 @app.route("/api/checkin", methods=["POST"])
@@ -233,6 +242,12 @@ def api_checkin():
     location = scheduled_location(emp["grp"], date.today())
     label = (f"Office – {emp['office_loc'] or 'Andheri'}"
              if location == "Office" else "Outside")
+    where = data.get("where")
+    if where in ("office", "outside"):
+        location = "Office" if where == "office" else "Outside"
+        label = (f"Office – {emp['office_loc'] or 'Andheri'}"
+                 if location == "Office" else "Outside")
+    branch = emp["office_loc"] or "Andheri"
     capture = None
 
     if method == "face":
@@ -261,13 +276,14 @@ def api_checkin():
 
     now = datetime.now()
     conn.execute(
-        """INSERT INTO attendance(employee_id, day, checkin_time, method, location, capture)
-           VALUES(?,?,?,?,?,?)
+        """INSERT INTO attendance(employee_id, day, checkin_time, method, location, capture, branch)
+           VALUES(?,?,?,?,?,?,?)
            ON CONFLICT(employee_id, day) DO UPDATE SET
              checkin_time=excluded.checkin_time, method=excluded.method,
-             location=excluded.location, capture=excluded.capture""",
+             location=excluded.location, capture=excluded.capture,
+             branch=excluded.branch""",
         (emp_id, date.today().isoformat(), now.strftime("%H:%M:%S"),
-         method, location, capture))
+         method, location, capture, branch))
     conn.commit()
     conn.close()
     return jsonify(ok=True, name=emp["name"], location=location, label=label,
@@ -344,7 +360,7 @@ def build_grid(month):
     conn = get_db()
     emps = conn.execute("SELECT * FROM employees ORDER BY id").fetchall()
     rows = conn.execute(
-        "SELECT employee_id, day, method, location, checkin_time FROM attendance")
+        "SELECT employee_id, day, method, location, checkin_time, branch FROM attendance")
     mark = {(r["employee_id"], r["day"]): r for r in rows}
     conn.close()
     grid = []
@@ -358,7 +374,7 @@ def build_grid(month):
                 counts["Present"] += 1
                 counts[r["location"]] += 1
                 if r["location"] == "Office":
-                    v = "AND" if (e["office_loc"] or "Andheri") == "Andheri" else "AMB"
+                    v = "AND" if (r["branch"] or e["office_loc"] or "Andheri") == "Andheri" else "AMB"
                 else:
                     v = "OUT"
                 cells.append({"v": v,
@@ -431,6 +447,11 @@ def report_xlsx():
     return send_file(
         buf, as_attachment=True, download_name=name,
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+
+@app.route("/captures/<path:name>")
+def serve_capture(name):
+    return send_from_directory(CAPTURES_DIR, name)
 
 
 @app.route("/api/backup")

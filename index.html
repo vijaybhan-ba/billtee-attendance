@@ -105,7 +105,7 @@ function renderDash(){
     const du=duty(e,t),m=day[e.id];
     h+=`<tr><td class="c">${e.id}</td><td>${e.name}</td><td class="c">${e.grp}</td>
     <td class="c"><span class="badge ${du.location==="Office"?"office":"outside"}">${du.label}</span></td>
-    <td>${m?`<span class="badge done">Present · ${m.method} @ ${m.time}</span>`:`<span class="badge absent">Not checked in</span>`}</td></tr>`;
+    <td>${m?`<span class="badge done">Present · ${m.method} @ ${m.time} · ${m.location==="Office"?"Office – "+(m.branch||e.loc):"Outside"}</span>${(m.location==="Office")!==(du.location==="Office")?` <span class="badge absent">duty was: ${du.location}</span>`:""}`:`<span class="badge absent">Not checked in</span>`}</td></tr>`;
   });
   $("t-dash").innerHTML=h+"</table>";
 }
@@ -117,6 +117,8 @@ function renderCheck(){
   let h=`<h2>Check-In — ${t}</h2><div class="card">
   <label>Employee</label><select id="ck-emp">${S.employees.map(e=>`<option value="${e.id}">${e.id}. ${e.name}</option>`).join("")}</select>
   <p class="msg ok" id="ck-duty"></p>
+  <label>Where are you now?</label>
+  <select id="ck-loc"><option value="outside" selected>🌆 Outside (not at my office)</option><option id="ck-loc-office" value="office">🏢 At my office</option></select>
   <video id="cam" autoplay playsinline muted></video>
   <div class="row"><button class="btn" onclick="camStart()">🎥 Start Camera</button>
   <button class="btn primary" onclick="faceIn()">📸 Face Capture Check-In</button></div>
@@ -124,20 +126,22 @@ function renderCheck(){
   <button class="btn" onclick="fpIn()">👆 Fingerprint</button>
   <button class="btn" onclick="manualIn()">✍️ Manual</button></div>
   <p class="msg" id="ck-msg"></p></div>
-  <h3>Already checked in today</h3><table><tr><th class="c">#</th><th>Name</th><th class="c">Time</th><th class="c">Method</th><th class="c">Location</th></tr>`;
-  S.employees.forEach(e=>{const m=day[e.id];if(m)h+=`<tr><td class="c">${e.id}</td><td>${e.name}</td><td class="c">${m.time}</td><td class="c">${m.method}</td><td class="c"><span class="badge ${m.location==="Office"?"office":"outside"}">${m.location}</span></td></tr>`;});
+  <h3>Already checked in today</h3><table><tr><th class="c">#</th><th>Name</th><th class="c">Time</th><th class="c">Method</th><th class="c">Location</th><th class="c">Face photo</th></tr>`;
+  S.employees.forEach(e=>{const m=day[e.id];if(m)h+=`<tr><td class="c">${e.id}</td><td>${e.name}</td><td class="c">${m.time}</td><td class="c">${m.method}</td><td class="c"><span class="badge ${m.location==="Office"?"office":"outside"}">${m.location==="Office"?"Office – "+(m.branch||e.loc):"Outside"}</span></td><td class="c">${m.photo?`<img src="${m.photo}" style="height:38px;border-radius:6px">`:"—"}</td></tr>`;});
   h+=`</table>`;
   $("t-check").innerHTML=h;
   $("ck-emp").onchange=showDuty;showDuty();
 }
-function showDuty(){const e=S.employees.find(x=>x.id==+$("ck-emp").value);$("ck-duty").textContent="Today's duty: "+duty(e,todayStr()).label;}
+function showDuty(){const e=S.employees.find(x=>x.id==+$("ck-emp").value);$("ck-duty").textContent="Today's duty: "+duty(e,todayStr()).label;const o=$("ck-loc-office");if(o)o.textContent="🏢 At "+e.loc+" office (I am really here)";}
 function mark(method,img){
-  const e=S.employees.find(x=>x.id==+$("ck-emp").value),t=todayStr(),du=duty(e,t);
-  const now=new Date();
-  (S.attendance[t]||(S.attendance[t]={}))[e.id]={time:now.toTimeString().slice(0,8),method,location:du.location};
+  const e=S.employees.find(x=>x.id==+$("ck-emp").value),t=todayStr();
+  const where=($("ck-loc")?$("ck-loc").value:"outside")==="office";
+  const rec={time:new Date().toTimeString().slice(0,8),method,
+    location:where?"Office":"Outside",branch:e.loc,photo:img||null};
+  (S.attendance[t]||(S.attendance[t]={}))[e.id]=rec;
   if(img)e.face=img;
   save();
-  const m=$("ck-msg");m.textContent=`✔ ${e.name} present (${du.label}) at ${now.toTimeString().slice(0,5)}.`;m.className="msg ok";
+  const m=$("ck-msg");m.textContent=`✔ ${e.name} present (${where?"Office – "+e.loc:"Outside"}) at ${rec.time.slice(0,5)}.`;m.className="msg ok";
   setTimeout(()=>renderCheck(),900);
 }
 function camStart(){
@@ -203,7 +207,7 @@ function gridFor(m){
     let cells="",P=0,O=0,Out=0,A=0;
     for(let d=1;d<=nd;d++){
       const rec=(S.attendance[`${m}-${String(d).padStart(2,"0")}`]||{})[e.id];
-      if(rec){P++;if(rec.location==="Office"){O++;cells+=`<td class="c in">${e.loc==="Andheri"?"AND":"AMB"}</td>`;}else{Out++;cells+=`<td class="c out">OUT</td>`;}}
+      if(rec){P++;if(rec.location==="Office"){O++;cells+=`<td class="c in">${(rec.branch||e.loc)==="Andheri"?"AND":"AMB"}</td>`;}else{Out++;cells+=`<td class="c out">OUT</td>`;}}
       else{A++;cells+=`<td class="c abs">—</td>`;}
     }
     return {e,cells,P,O,Out,A};
@@ -227,7 +231,7 @@ function monthCSV(m){
     csv+=`${r.e.id},${r.e.name},${r.e.grp},${r.e.loc}`;
     for(let d=1;d<=nd;d++){
       const rec=(S.attendance[`${m}-${String(d).padStart(2,"0")}`]||{})[r.e.id];
-      csv+=","+(rec?(rec.location==="Office"?(r.e.loc==="Andheri"?"AND":"AMB"):"OUT"):"");
+      csv+=","+(rec?(rec.location==="Office"?((rec.branch||r.e.loc)==="Andheri"?"AND":"AMB"):"OUT"):"");
     }
     csv+=`,${r.P},${r.O},${r.Out},${r.A}\n`;
   });

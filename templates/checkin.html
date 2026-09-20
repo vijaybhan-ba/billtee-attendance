@@ -12,6 +12,8 @@
   </select>
   <p class="msg" id="duty"></p>
 
+  <label>Where are you now?</label>
+  <select id="where"><option value="outside" selected>🌆 Outside (not at my office)</option><option id="where-office" value="office">🏢 At my office</option></select>
   <video id="cam" autoplay playsinline muted></video>
   <div class="row">
     <button onclick="startCam()">🎥 Start Camera</button>
@@ -27,12 +29,13 @@
 
 <h3>Already checked in today</h3>
 <table>
-  <tr><th class="c">#</th><th>Name</th><th class="c">Time</th><th class="c">Method</th><th class="c">Location</th></tr>
+  <tr><th class="c">#</th><th>Name</th><th class="c">Time</th><th class="c">Method</th><th class="c">Location</th><th class="c">Photo</th></tr>
   {% for d in done %}
   <tr>
     <td class="c">{{ d.employee_id }}</td><td>{{ d.name }}</td>
     <td class="c">{{ d.checkin_time }}</td><td class="c">{{ d.method }}</td>
     <td class="c"><span class="badge {{ 'office' if d.location == 'Office' else 'outside' }}">{{ d.location }}</span></td>
+    <td class="c">{% if d.capture %}<img src="/captures/{{ d.capture }}" style="height:38px;border-radius:6px">{% else %}—{% endif %}</td>
   </tr>
   {% else %}
   <tr><td colspan="5" class="c">Nobody yet.</td></tr>
@@ -47,6 +50,7 @@ async function refreshDuty() {
   const el = document.getElementById("duty");
   el.textContent = "Today's duty: " + r.label;
   el.className = "msg ok";
+  document.getElementById("where-office").textContent = "🏢 At " + r.loc + " office (I am really here)";
 }
 refreshDuty();
 
@@ -57,7 +61,7 @@ async function faceCheckin() {
   try {
     const img = grabFrame("cam");
     const r = await postJSON("/api/checkin",
-      { employee_id: +document.getElementById("emp").value, method: "face", image: img });
+      { employee_id: +document.getElementById("emp").value, method: "face", image: img, where: document.getElementById("where").value });
     showMsg("msg", r.ok ? `✔ ${r.name} present (${r.label}) at ${r.time}.` : (r.error || "Failed."), !!r.ok);
     if (r.ok) setTimeout(() => location.reload(), 900);
   } catch (e) { showMsg("msg", "Camera not started or blocked — use fingerprint/manual.", false); }
@@ -65,13 +69,13 @@ async function faceCheckin() {
 async function fpCheckin() {
   const r = await postJSON("/api/checkin",
     { employee_id: +document.getElementById("emp").value,
-      method: "fingerprint", fp_code: document.getElementById("fp").value });
+      method: "fingerprint", fp_code: document.getElementById("fp").value, where: document.getElementById("where").value });
   showMsg("msg", r.ok ? `✔ ${r.name} present (${r.label}) at ${r.time}.` : (r.error || "Failed."), !!r.ok);
   if (r.ok) setTimeout(() => location.reload(), 900);
 }
 async function manualCheckin() {
   const r = await postJSON("/api/checkin",
-    { employee_id: +document.getElementById("emp").value, method: "manual" });
+    { employee_id: +document.getElementById("emp").value, method: "manual", where: document.getElementById("where").value });
   showMsg("msg", r.ok ? `✔ ${r.name} present (${r.label}) at ${r.time}.` : (r.error || "Failed."), !!r.ok);
   if (r.ok) setTimeout(() => location.reload(), 900);
 }

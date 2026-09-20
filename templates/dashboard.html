@@ -19,7 +19,8 @@
     <td class="c">{{ '✅' if r.emp.face_enrolled else '—' }}</td>
     <td>
       {% if r.mark %}
-        <span class="badge done">Present · {{ r.mark.method }} @ {{ r.mark.checkin_time }}</span>
+        <span class="badge done">Present · {{ r.mark.method }} @ {{ r.mark.checkin_time }} · {{ r.reclabel }}</span>
+        {% if r.mismatch %}<span class="badge absent">duty was: {{ r.location }}</span>{% endif %}
       {% else %}
         <span class="badge absent">Not checked in</span>
       {% endif %}
