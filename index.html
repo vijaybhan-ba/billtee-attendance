@@ -62,7 +62,7 @@ label{font-weight:600;display:block;margin:8px 0 4px}
 
 <script>
 "use strict";
-const KEY="billtee_attendance_v2";
+const KEY="billtee_attendance_v3";
 const NAMES=["Ajit","Shyam","Nikhat","Nitish","Manish","Anshuman","Sarad","Vijay"];
 let MEM=null;
 function lsGet(){try{return localStorage.getItem(KEY);}catch(e){return MEM;}}
@@ -73,7 +73,7 @@ function load(){
   return {
     config:{company:"Billtee",year:"2026-27",github:"https://github.com/vijaybhan-ba/billtee-attendance",cycle:"2026-04-01",
       offices:{Andheri:{lat:19.1197,lon:72.8464},Ambadi:{lat:19.7577,lon:72.7454}},radius:500},
-    employees:NAMES.map((n,i)=>({id:i+1,name:n,grp:i<4?"A":"B",fp:String(1001+i),loc:i<4?"Andheri":"Ambadi",face:null})),
+    employees:NAMES.map((n,i)=>({id:i+1,name:n,grp:i<4?"A":"B",fp:String(1001+i),loc:[,"Ambadi","Andheri","Andheri","Ambadi","Ambadi","Andheri","Ambadi","Andheri"][i+1],face:null})),
     attendance:{}
   };
 }
@@ -98,9 +98,9 @@ function haversine(a,b){const R=6371000,rad=x=>x*Math.PI/180;
   return 2*R*Math.asin(Math.sqrt(s));}
 function getGeo(){return new Promise(res=>{
   if(!navigator.geolocation)return res(null);
-  let done=false;const t=setTimeout(()=>{if(!done){done=true;res(null);}},6000);
+  let done=false;const t=setTimeout(()=>{if(!done){done=true;res(null);}},4500);
   navigator.geolocation.getCurrentPosition(p=>{if(!done){done=true;clearTimeout(t);res({lat:p.coords.latitude,lon:p.coords.longitude});}},
-    ()=>{if(!done){done=true;clearTimeout(t);res(null);}},{enableHighAccuracy:true,timeout:5000,maximumAge:60000});
+    ()=>{if(!done){done=true;clearTimeout(t);res(null);}},{enableHighAccuracy:false,timeout:4000,maximumAge:120000});
 });}
 async function reverseName(g){
   try{
@@ -126,6 +126,7 @@ $("nav").addEventListener("click",e=>{
 /* ---------- dashboard ---------- */
 function recLabel(m,e){
   if(!m)return null;
+  if(m.location==="…")return "📡 locating…";
   if(m.location==="Office")return "Office – "+(m.branch||e.loc);
   if(m.location==="Outside")return "Outside"+(m.place?" – "+m.place:"");
   if(m.location==="Leave")return "On leave";
@@ -175,15 +176,22 @@ async function autoPlace(emp){
   const w=($("ck-loc")?$("ck-loc").value:"outside")==="office";
   return{location:w?"Office":"Outside",branch:emp.loc,place:w?emp.loc+" office":null,auto:false};
 }
-function store(emp,rec){
+function put(emp,rec){
   const t=todayStr();
   (S.attendance[t]||(S.attendance[t]={}))[emp.id]=rec;
   if(rec.photo)emp.face=rec.photo;
   save();
-  const m=$("ck-msg");
-  m.textContent=`✔ ${emp.name} present — ${recLabel(rec,emp)} at ${rec.time.slice(0,5)}${rec.auto?" (auto location)":""}.`;
-  m.className="msg ok";
-  setTimeout(()=>renderCheck(),1200);
+}
+async function checkIn(method,img){
+  const emp=curEmp();
+  const rec={time:new Date().toTimeString().slice(0,8),method,photo:img,
+    location:"…",branch:emp.loc,place:"📡 locating…",auto:false};
+  put(emp,rec);renderCheck();
+  const m=$("ck-msg");m.textContent=`✔ ${emp.name} present — 📡 fetching location…`;m.className="msg ok";
+  const pl=await autoPlace(emp);
+  Object.assign(rec,pl);save();
+  const mm=$("ck-msg");mm.textContent=`✔ ${emp.name} present — ${recLabel(rec,emp)} at ${rec.time.slice(0,5)}${pl.auto?" (auto)":""}.`;mm.className="msg ok";
+  setTimeout(()=>renderCheck(),400);
 }
 function camStart(){
   if(!navigator.mediaDevices){const m=$("ck-msg");m.textContent="No camera here — download this file and open in your browser for camera+GPS.";m.className="msg err";return;}
@@ -191,25 +199,21 @@ function camStart(){
 }
 async function faceIn(){
   const v=$("cam");if(!v.videoWidth){const m=$("ck-msg");m.textContent="Start the camera first.";m.className="msg err";return;}
-  const m=$("ck-msg");m.textContent="📍 Capturing live photo + your location…";m.className="msg ok";
   const c=document.createElement("canvas");c.width=v.videoWidth;c.height=v.videoHeight;c.getContext("2d").drawImage(v,0,0);
   let img=null;try{img=c.toDataURL("image/jpeg",.6);}catch(e){}
-  const emp=curEmp(),pl=await autoPlace(emp);
-  store(emp,{time:new Date().toTimeString().slice(0,8),method:"face",photo:img,...pl});
+  checkIn("face",img);
 }
 async function fpIn(){
   const emp=curEmp(),m=$("ck-msg");
   if($("ck-fp").value.trim()!==emp.fp){m.textContent="Fingerprint code does not match.";m.className="msg err";return;}
-  const pl=await autoPlace(emp);
-  store(emp,{time:new Date().toTimeString().slice(0,8),method:"fingerprint",photo:null,...pl});
+  checkIn("fingerprint",null);
 }
-async function manualIn(){
-  const emp=curEmp(),pl=await autoPlace(emp);
-  store(emp,{time:new Date().toTimeString().slice(0,8),method:"manual",photo:null,...pl});
-}
+async function manualIn(){checkIn("manual",null);}
 function leaveIn(){
   const emp=curEmp();
-  store(emp,{time:new Date().toTimeString().slice(0,8),method:"leave",location:"Leave",branch:emp.loc,place:null,photo:null,auto:false});
+  put(emp,{time:new Date().toTimeString().slice(0,8),method:"leave",location:"Leave",branch:emp.loc,place:null,photo:null,auto:false});
+  const m=$("ck-msg");m.textContent=`🏖️ ${emp.name} — On leave.`;m.className="msg ok";
+  setTimeout(()=>renderCheck(),400);
 }
 /* ---------- employees ---------- */
 function renderEmps(){
@@ -251,6 +255,7 @@ function renderRep(){
   repGrid();
 }
 function cellFor(rec,e,day){
+  if(rec&&rec.location==="…")return{v:"…",cls:"out",t:"locating…"};
   if(rec){
     if(rec.location==="Office")return{v:(rec.branch||e.loc)==="Andheri"?"AND":"AMB",cls:"in",t:rec.method+" @ "+rec.time};
     if(rec.location==="Leave")return{v:"LV",cls:"lv",t:"leave"};
