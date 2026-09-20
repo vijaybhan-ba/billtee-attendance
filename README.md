@@ -76,3 +76,14 @@ git push -u origin main
 3. Repository **Settings → Pages** → Source: *Deploy from a branch* → `main` / `/ (root)` → Save.
 4. Your permanent site is live at `https://vijaybhan-ba.github.io/billtee-attendance/` —
    every employee opens the same link on their phone; each device keeps its own data.
+
+
+## v2 features (live site)
+
+* **Auto location with live photo** — check-in captures the live photo *and* the GPS
+  position; inside the office radius it records **Office – Andheri/Ambadi**, otherwise
+  **Outside – <area>** (e.g. "Outside – Virar") via OpenStreetMap reverse geocoding.
+* **Sundays = automatic holiday** (H in reports, not counted absent).
+* **🏖️ Leave** option for requested holidays (LV in reports).
+* Office GPS coordinates + radius editable in **Settings** (paste exact coordinates
+  from Google Maps for perfect detection).

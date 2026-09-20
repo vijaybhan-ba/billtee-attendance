@@ -22,6 +22,7 @@ td.c,th.c{text-align:center}
 .badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:.78rem;font-weight:700}
 .badge.office{background:#c6efce;color:#1e6b34}.badge.outside{background:#bdd7ee;color:#1f4e79}
 .badge.absent{background:#f2dcdb;color:#9c2b23}.badge.done{background:#c6efce;color:#1e6b34}
+.badge.leave{background:#ffe699;color:#7a5c00}.badge.holiday{background:#e6e6e6;color:#555}
 button.btn{background:#e8edf6;border:1px solid #c6d2e6;color:#1c2733;padding:8px 14px;border-radius:7px;font-weight:600;cursor:pointer}
 button.btn:hover{background:#dce6f7}
 button.primary{background:#2f5496;border-color:#2f5496;color:#fff}
@@ -31,7 +32,8 @@ video{width:300px;max-width:100%;border-radius:10px;background:#101826;margin-to
 .msg{margin-top:10px;font-weight:600;min-height:1.2em}.msg.ok{color:#1e6b34}.msg.err{color:#9c2b23}
 td.in{background:#c6efce!important;color:#1e6b34;font-weight:700}
 td.out{background:#bdd7ee!important;color:#1f4e79;font-weight:700}
-td.abs{color:#b98a86}
+td.abs{color:#b98a86}td.lv{background:#ffe699!important;color:#7a5c00;font-weight:700}
+td.hol{background:#e6e6e6!important;color:#555;font-weight:700}
 footer{background:#22303f;color:#b9c6d6;padding:10px 18px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:.82rem}
 footer a{color:#8ab4f8}
 label{font-weight:600;display:block;margin:8px 0 4px}
@@ -56,38 +58,64 @@ label{font-weight:600;display:block;margin:8px 0 4px}
 <section id="t-rep" class="hidden"></section>
 <section id="t-set" class="hidden"></section>
 </main>
-<footer><span>Rotation: 3 days in office • 3 days outside · Offices: Andheri &amp; Ambadi</span><a id="gh" href="#" target="_blank" rel="noopener"></a></footer>
+<footer><span>Rotation: 3 days in office • 3 days outside · Offices: Andheri &amp; Ambadi · Sundays = holiday</span><a id="gh" href="#" target="_blank" rel="noopener"></a></footer>
 
 <script>
 "use strict";
-/* ---------- state ---------- */
-const KEY="billtee_attendance_v1";
+const KEY="billtee_attendance_v2";
 const NAMES=["Ajit","Shyam","Nikhat","Nitish","Manish","Anshuman","Sarad","Vijay"];
 let MEM=null;
 function lsGet(){try{return localStorage.getItem(KEY);}catch(e){return MEM;}}
 function lsSet(v){MEM=v;try{localStorage.setItem(KEY,v);}catch(e){}}
 function lsDel(){MEM=null;try{localStorage.removeItem(KEY);}catch(e){}}
-let S=load();
 function load(){
   try{const s=JSON.parse(lsGet());if(s&&s.employees)return s;}catch(e){}
   return {
-    config:{company:"Billtee",year:"2026-27",github:"https://github.com/vijaybhan-ba/billtee-attendance",cycle:"2026-04-01"},
+    config:{company:"Billtee",year:"2026-27",github:"https://github.com/vijaybhan-ba/billtee-attendance",cycle:"2026-04-01",
+      offices:{Andheri:{lat:19.1197,lon:72.8464},Ambadi:{lat:19.7577,lon:72.7454}},radius:500},
     employees:NAMES.map((n,i)=>({id:i+1,name:n,grp:i<4?"A":"B",fp:String(1001+i),loc:i<4?"Andheri":"Ambadi",face:null})),
-    attendance:{} // "YYYY-MM-DD": {empId:{time,method,location}}
+    attendance:{}
   };
 }
+let S=load();
 function save(){lsSet(JSON.stringify(S));}
 const $=id=>document.getElementById(id);
 const todayStr=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");};
+const isSunday=day=>new Date(day+"T00:00:00").getDay()===0;
 function shiftMonth(m,d){let[y,mo]=m.split("-").map(Number);mo+=d;y+=Math.floor((mo-1)/12);mo=((mo-1)%12+12)%12+1;return y+"-"+String(mo).padStart(2,"0");}
 function duty(emp,day){
+  if(isSunday(day))return{location:"Holiday",label:"Holiday (Sunday)"};
   const start=new Date(S.config.cycle+"T00:00:00"),d=new Date(day+"T00:00:00");
   const pos=Math.round((d-start)/864e5)%6,aIn=pos<3;
   const office=emp.grp==="A"?aIn:!aIn;
   return office?{location:"Office",label:"Office – "+emp.loc}:{location:"Outside",label:"Outside"};
 }
 function dl(name,mime,text){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([text],{type:mime}));a.download=name;a.click();}
-
+/* ---------- geo ---------- */
+function haversine(a,b){const R=6371000,rad=x=>x*Math.PI/180;
+  const dLa=rad(b.lat-a.lat),dLo=rad(b.lon-a.lon);
+  const s=Math.sin(dLa/2)**2+Math.cos(rad(a.lat))*Math.cos(rad(b.lat))*Math.sin(dLo/2)**2;
+  return 2*R*Math.asin(Math.sqrt(s));}
+function getGeo(){return new Promise(res=>{
+  if(!navigator.geolocation)return res(null);
+  let done=false;const t=setTimeout(()=>{if(!done){done=true;res(null);}},6000);
+  navigator.geolocation.getCurrentPosition(p=>{if(!done){done=true;clearTimeout(t);res({lat:p.coords.latitude,lon:p.coords.longitude});}},
+    ()=>{if(!done){done=true;clearTimeout(t);res(null);}},{enableHighAccuracy:true,timeout:5000,maximumAge:60000});
+});}
+async function reverseName(g){
+  try{
+    const r=await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${g.lat}&lon=${g.lon}&zoom=14&accept-language=en`);
+    const j=await r.json();const a=j.address||{};
+    return a.suburb||a.neighbourhood||a.village||a.town||a.city||a.county||(`${g.lat.toFixed(2)}, ${g.lon.toFixed(2)}`);
+  }catch(e){return `${g.lat.toFixed(2)}, ${g.lon.toFixed(2)}`;}
+}
+async function classify(g,emp){
+  const ofs=S.config.offices,rad=+S.config.radius||500;
+  let best=null,bd=1e12;
+  for(const[name,c]of Object.entries(ofs)){const d=haversine(c,g);if(d<bd){bd=d;best=name;}}
+  if(bd<=rad)return{location:"Office",branch:best,place:best+" office",auto:true};
+  return{location:"Outside",branch:emp.loc,place:await reverseName(g),auto:true};
+}
 /* ---------- nav ---------- */
 $("nav").addEventListener("click",e=>{
   const b=e.target.closest("button");if(!b)return;
@@ -95,76 +123,98 @@ $("nav").addEventListener("click",e=>{
   ["dash","check","emps","rep","set"].forEach(t=>$("t-"+t).classList.toggle("hidden",t!==b.dataset.t));
   render(b.dataset.t);
 });
-
 /* ---------- dashboard ---------- */
+function recLabel(m,e){
+  if(!m)return null;
+  if(m.location==="Office")return "Office – "+(m.branch||e.loc);
+  if(m.location==="Outside")return "Outside"+(m.place?" – "+m.place:"");
+  if(m.location==="Leave")return "On leave";
+  return m.location;
+}
 function renderDash(){
-  const t=todayStr(),day=S.attendance[t]||{};
-  let h=`<h2>Dashboard — ${t}</h2><p class="sub">Today's duty per employee (${S.config.company}).</p>
-  <table><tr><th class="c">#</th><th>Employee</th><th class="c">Team</th><th class="c">Today's Duty</th><th>Status</th></tr>`;
+  const t=todayStr(),day=S.attendance[t]||{},sun=isSunday(t);
+  let h=`<h2>Dashboard — ${t}${sun?" (Holiday – Sunday)":""}</h2><p class="sub">Actual recorded place per employee (${S.config.company}).</p>
+  <table><tr><th class="c">#</th><th>Employee</th><th class="c">Team</th><th class="c">Duty</th><th>Status</th></tr>`;
   S.employees.forEach(e=>{
     const du=duty(e,t),m=day[e.id];
     h+=`<tr><td class="c">${e.id}</td><td>${e.name}</td><td class="c">${e.grp}</td>
-    <td class="c"><span class="badge ${du.location==="Office"?"office":"outside"}">${du.label}</span></td>
-    <td>${m?`<span class="badge done">Present · ${m.method} @ ${m.time} · ${m.location==="Office"?"Office – "+(m.branch||e.loc):"Outside"}</span>${(m.location==="Office")!==(du.location==="Office")?` <span class="badge absent">duty was: ${du.location}</span>`:""}`:`<span class="badge absent">Not checked in</span>`}</td></tr>`;
+    <td class="c"><span class="badge ${du.location==="Office"?"office":du.location==="Holiday"?"holiday":"outside"}">${du.label}</span></td>
+    <td>${m?`<span class="badge ${m.location==="Office"?"done":m.location==="Leave"?"leave":"outside"}">${recLabel(m,e)} · ${m.method} @ ${m.time}</span>${(m.location==="Office")!==(du.location==="Office")&&du.location!=="Holiday"?` <span class="badge absent">duty was: ${du.location}</span>`:""}`
+      :sun?`<span class="badge holiday">Holiday</span>`:`<span class="badge absent">Not checked in</span>`}</td></tr>`;
   });
   $("t-dash").innerHTML=h+"</table>";
 }
-
 /* ---------- check-in ---------- */
 let stream=null;
 function renderCheck(){
   const t=todayStr(),day=S.attendance[t]||{};
-  let h=`<h2>Check-In — ${t}</h2><div class="card">
+  let h=`<h2>Check-In — ${t}${isSunday(t)?" (Holiday – Sunday)":""}</h2><div class="card">
   <label>Employee</label><select id="ck-emp">${S.employees.map(e=>`<option value="${e.id}">${e.id}. ${e.name}</option>`).join("")}</select>
   <p class="msg ok" id="ck-duty"></p>
-  <label>Where are you now?</label>
+  <label>Where are you now? (used only if GPS is unavailable)</label>
   <select id="ck-loc"><option value="outside" selected>🌆 Outside (not at my office)</option><option id="ck-loc-office" value="office">🏢 At my office</option></select>
   <video id="cam" autoplay playsinline muted></video>
   <div class="row"><button class="btn" onclick="camStart()">🎥 Start Camera</button>
-  <button class="btn primary" onclick="faceIn()">📸 Face Capture Check-In</button></div>
+  <button class="btn primary" onclick="faceIn()">📸 Live Photo + Auto Location Check-In</button></div>
   <div class="row"><input id="ck-fp" placeholder="Fingerprint code" inputmode="numeric" style="width:140px">
   <button class="btn" onclick="fpIn()">👆 Fingerprint</button>
-  <button class="btn" onclick="manualIn()">✍️ Manual</button></div>
+  <button class="btn" onclick="manualIn()">✍️ Manual</button>
+  <button class="btn" onclick="leaveIn()">🏖️ Leave</button></div>
   <p class="msg" id="ck-msg"></p></div>
-  <h3>Already checked in today</h3><table><tr><th class="c">#</th><th>Name</th><th class="c">Time</th><th class="c">Method</th><th class="c">Location</th><th class="c">Face photo</th></tr>`;
-  S.employees.forEach(e=>{const m=day[e.id];if(m)h+=`<tr><td class="c">${e.id}</td><td>${e.name}</td><td class="c">${m.time}</td><td class="c">${m.method}</td><td class="c"><span class="badge ${m.location==="Office"?"office":"outside"}">${m.location==="Office"?"Office – "+(m.branch||e.loc):"Outside"}</span></td><td class="c">${m.photo?`<img src="${m.photo}" style="height:38px;border-radius:6px">`:"—"}</td></tr>`;});
+  <h3>Already checked in today</h3><table><tr><th class="c">#</th><th>Name</th><th class="c">Time</th><th class="c">Method</th><th class="c">Location (auto)</th><th class="c">Face photo</th></tr>`;
+  S.employees.forEach(e=>{const m=day[e.id];if(m)h+=`<tr><td class="c">${e.id}</td><td>${e.name}</td><td class="c">${m.time}</td><td class="c">${m.method}</td><td class="c"><span class="badge ${m.location==="Office"?"office":m.location==="Leave"?"leave":"outside"}">${recLabel(m,e)}</span></td><td class="c">${m.photo?`<img src="${m.photo}" style="height:38px;border-radius:6px">`:"—"}</td></tr>`;});
   h+=`</table>`;
   $("t-check").innerHTML=h;
   $("ck-emp").onchange=showDuty;showDuty();
 }
 function showDuty(){const e=S.employees.find(x=>x.id==+$("ck-emp").value);$("ck-duty").textContent="Today's duty: "+duty(e,todayStr()).label;const o=$("ck-loc-office");if(o)o.textContent="🏢 At "+e.loc+" office (I am really here)";}
-function mark(method,img){
-  const e=S.employees.find(x=>x.id==+$("ck-emp").value),t=todayStr();
-  const where=($("ck-loc")?$("ck-loc").value:"outside")==="office";
-  const rec={time:new Date().toTimeString().slice(0,8),method,
-    location:where?"Office":"Outside",branch:e.loc,photo:img||null};
-  (S.attendance[t]||(S.attendance[t]={}))[e.id]=rec;
-  if(img)e.face=img;
+function curEmp(){return S.employees.find(x=>x.id==+$("ck-emp").value);}
+async function autoPlace(emp){
+  const g=await getGeo();
+  if(g)return classify(g,emp);
+  const w=($("ck-loc")?$("ck-loc").value:"outside")==="office";
+  return{location:w?"Office":"Outside",branch:emp.loc,place:w?emp.loc+" office":null,auto:false};
+}
+function store(emp,rec){
+  const t=todayStr();
+  (S.attendance[t]||(S.attendance[t]={}))[emp.id]=rec;
+  if(rec.photo)emp.face=rec.photo;
   save();
-  const m=$("ck-msg");m.textContent=`✔ ${e.name} present (${where?"Office – "+e.loc:"Outside"}) at ${rec.time.slice(0,5)}.`;m.className="msg ok";
-  setTimeout(()=>renderCheck(),900);
+  const m=$("ck-msg");
+  m.textContent=`✔ ${emp.name} present — ${recLabel(rec,emp)} at ${rec.time.slice(0,5)}${rec.auto?" (auto location)":""}.`;
+  m.className="msg ok";
+  setTimeout(()=>renderCheck(),1200);
 }
 function camStart(){
-  if(!navigator.mediaDevices){const m=$("ck-msg");m.textContent="No camera here — use fingerprint/manual (camera works when you download this file and open it in your browser).";m.className="msg err";return;}
+  if(!navigator.mediaDevices){const m=$("ck-msg");m.textContent="No camera here — download this file and open in your browser for camera+GPS.";m.className="msg err";return;}
   navigator.mediaDevices.getUserMedia({video:{facingMode:"user"}}).then(s=>{stream=s;$("cam").srcObject=s;}).catch(()=>{const m=$("ck-msg");m.textContent="Camera blocked — use fingerprint/manual.";m.className="msg err";});
 }
-function faceIn(){
+async function faceIn(){
   const v=$("cam");if(!v.videoWidth){const m=$("ck-msg");m.textContent="Start the camera first.";m.className="msg err";return;}
+  const m=$("ck-msg");m.textContent="📍 Capturing live photo + your location…";m.className="msg ok";
   const c=document.createElement("canvas");c.width=v.videoWidth;c.height=v.videoHeight;c.getContext("2d").drawImage(v,0,0);
   let img=null;try{img=c.toDataURL("image/jpeg",.6);}catch(e){}
-  mark("face",img);
+  const emp=curEmp(),pl=await autoPlace(emp);
+  store(emp,{time:new Date().toTimeString().slice(0,8),method:"face",photo:img,...pl});
 }
-function fpIn(){
-  const e=S.employees.find(x=>x.id==+$("ck-emp").value),m=$("ck-msg");
-  if($("ck-fp").value.trim()!==e.fp){m.textContent="Fingerprint code does not match.";m.className="msg err";return;}
-  mark("fingerprint");
+async function fpIn(){
+  const emp=curEmp(),m=$("ck-msg");
+  if($("ck-fp").value.trim()!==emp.fp){m.textContent="Fingerprint code does not match.";m.className="msg err";return;}
+  const pl=await autoPlace(emp);
+  store(emp,{time:new Date().toTimeString().slice(0,8),method:"fingerprint",photo:null,...pl});
 }
-function manualIn(){mark("manual");}
-
+async function manualIn(){
+  const emp=curEmp(),pl=await autoPlace(emp);
+  store(emp,{time:new Date().toTimeString().slice(0,8),method:"manual",photo:null,...pl});
+}
+function leaveIn(){
+  const emp=curEmp();
+  store(emp,{time:new Date().toTimeString().slice(0,8),method:"leave",location:"Leave",branch:emp.loc,place:null,photo:null,auto:false});
+}
 /* ---------- employees ---------- */
 function renderEmps(){
-  let h=`<h2>Employees</h2><p class="sub">Team / office location / fingerprint code — changes save instantly.</p>
-  <table><tr><th class="c">#</th><th>Name</th><th class="c">Team</th><th class="c">Office</th><th>Fingerprint</th><th class="c">Face</th></tr>`;
+  let h=`<h2>Employees</h2><p class="sub">Team / main office / fingerprint code — saves instantly.</p>
+  <table><tr><th class="c">#</th><th>Name</th><th class="c">Team</th><th class="c">Main office</th><th>Fingerprint</th><th class="c">Face</th></tr>`;
   S.employees.forEach(e=>{
     h+=`<tr><td class="c">${e.id}</td><td>${e.name}</td>
     <td class="c"><select onchange="updEmp(${e.id},{grp:this.value})"><option ${e.grp==="A"?"selected":""}>A</option><option ${e.grp==="B"?"selected":""}>B</option></select></td>
@@ -172,12 +222,12 @@ function renderEmps(){
     <td><input value="${e.fp}" style="width:100px" onchange="updEmp(${e.id},{fp:this.value})"></td>
     <td class="c">${e.face?"✅":"—"} <button class="btn" onclick="enrollPrompt(${e.id})">Enroll</button></td></tr>`;
   });
-  $("t-emps").innerHTML=h+"</table><p class='sub'>Enroll stores a camera snapshot when camera is available.</p>";
+  $("t-emps").innerHTML=h+"</table>";
 }
 function updEmp(id,patch){const e=S.employees.find(x=>x.id===id);Object.assign(e,patch);save();renderEmps();}
 function enrollPrompt(id){
   const e=S.employees.find(x=>x.id===id);
-  if(!navigator.mediaDevices){alert("No camera in this viewer. Download this file and open it in your browser to enroll faces.");return;}
+  if(!navigator.mediaDevices){alert("No camera in this viewer. Download this file and open in your browser to enroll faces.");return;}
   navigator.mediaDevices.getUserMedia({video:{facingMode:"user"}}).then(s=>{
     const v=document.createElement("video");v.srcObject=s;v.muted=true;v.play();
     setTimeout(()=>{const c=document.createElement("canvas");c.width=v.videoWidth||320;c.height=v.videoHeight||240;
@@ -186,7 +236,6 @@ function enrollPrompt(id){
       renderEmps();},700);
   }).catch(()=>alert("Camera blocked."));
 }
-
 /* ---------- reports ---------- */
 function renderRep(){
   const m=todayStr().slice(0,7);
@@ -196,21 +245,33 @@ function renderRep(){
   <button class="btn" onclick="repCSV(1)">⬇️ Excel CSV — 1 month</button>
   <button class="btn" onclick="repCSV(2)">⬇️ Excel CSV — 2 months</button>
   <button class="btn" onclick="backup()">💾 Backup — 2 months (JSON)</button></div>
-  <p class="sub">AND = Andheri office · AMB = Ambadi office · OUT = outside · — = absent</p>
+  <p class="sub">AND = Andheri · AMB = Ambadi · OUT = outside (place shown on hover) · LV = leave · H = Sunday holiday · — = absent</p>
   <div id="rp-grid" style="overflow-x:auto"></div><div id="rp-msg" class="msg"></div>
   <pre id="rp-out" style="display:none;max-height:220px;overflow:auto;background:#101826;color:#cfe3ff;border-radius:8px;padding:8px;margin-top:10px;font-size:.7rem"></pre>`;
   repGrid();
 }
+function cellFor(rec,e,day){
+  if(rec){
+    if(rec.location==="Office")return{v:(rec.branch||e.loc)==="Andheri"?"AND":"AMB",cls:"in",t:rec.method+" @ "+rec.time};
+    if(rec.location==="Leave")return{v:"LV",cls:"lv",t:"leave"};
+    return{v:"OUT",cls:"out",t:(rec.place||"outside")+" · "+rec.method+" @ "+rec.time};
+  }
+  if(isSunday(day))return{v:"H",cls:"hol",t:"Sunday holiday"};
+  return{v:"—",cls:"abs",t:""};
+}
 function gridFor(m){
   const [y,mo]=m.split("-").map(Number),nd=new Date(y,mo,0).getDate();
   return S.employees.map(e=>{
-    let cells="",P=0,O=0,Out=0,A=0;
+    let cells="",P=0,O=0,Out=0,LV=0,A=0;
     for(let d=1;d<=nd;d++){
-      const rec=(S.attendance[`${m}-${String(d).padStart(2,"0")}`]||{})[e.id];
-      if(rec){P++;if(rec.location==="Office"){O++;cells+=`<td class="c in">${(rec.branch||e.loc)==="Andheri"?"AND":"AMB"}</td>`;}else{Out++;cells+=`<td class="c out">OUT</td>`;}}
-      else{A++;cells+=`<td class="c abs">—</td>`;}
+      const day=`${m}-${String(d).padStart(2,"0")}`;
+      const rec=(S.attendance[day]||{})[e.id];
+      const c=cellFor(rec,e,day);
+      cells+=`<td class="c ${c.cls}" title="${c.t}">${c.v}</td>`;
+      if(rec){if(rec.location==="Office"){P++;O++;}else if(rec.location==="Leave"){LV++;}else{P++;Out++;}}
+      else if(!isSunday(day))A++;
     }
-    return {e,cells,P,O,Out,A};
+    return {e,cells,P,O,Out,LV,A};
   });
 }
 function repGrid(){
@@ -218,22 +279,24 @@ function repGrid(){
   const nd=g[0].cells.split("<td").length-1;
   let h=`<table style="font-size:.75rem"><tr><th>#</th><th>Employee</th><th>Office</th>`;
   for(let d=1;d<=nd;d++)h+=`<th class="c">${d}</th>`;
-  h+=`<th class="c">P</th><th class="c">Off</th><th class="c">Out</th><th class="c">Abs</th></tr>`;
-  g.forEach(r=>{h+=`<tr><td>${r.e.id}</td><td>${r.e.name}</td><td>${r.e.loc}</td>${r.cells}<td class="c"><b>${r.P}</b></td><td class="c">${r.O}</td><td class="c">${r.Out}</td><td class="c">${r.A}</td></tr>`;});
+  h+=`<th class="c">P</th><th class="c">Off</th><th class="c">Out</th><th class="c">LV</th><th class="c">Abs</th></tr>`;
+  g.forEach(r=>{h+=`<tr><td>${r.e.id}</td><td>${r.e.name}</td><td>${r.e.loc}</td>${r.cells}<td class="c"><b>${r.P}</b></td><td class="c">${r.O}</td><td class="c">${r.Out}</td><td class="c">${r.LV}</td><td class="c">${r.A}</td></tr>`;});
   $("rp-grid").innerHTML=h+"</table>";
 }
 function monthCSV(m){
   const g=gridFor(m),[y,mo]=m.split("-").map(Number),nd=new Date(y,mo,0).getDate();
-  let csv=`${S.config.company} Attendance ${S.config.year} - ${m}\n${S.config.github}\nNo,Employee,Team,Office Location`;
+  let csv=`${S.config.company} Attendance ${S.config.year} - ${m}\n${S.config.github}\nNo,Employee,Team,Main Office`;
   for(let d=1;d<=nd;d++)csv+=","+d;
-  csv+=`,Present,Office,Outside,Absent\n`;
+  csv+=`,Present,Office,Outside,Leave,Absent\n`;
   g.forEach(r=>{
     csv+=`${r.e.id},${r.e.name},${r.e.grp},${r.e.loc}`;
     for(let d=1;d<=nd;d++){
-      const rec=(S.attendance[`${m}-${String(d).padStart(2,"0")}`]||{})[r.e.id];
-      csv+=","+(rec?(rec.location==="Office"?((rec.branch||r.e.loc)==="Andheri"?"AND":"AMB"):"OUT"):"");
+      const day=`${m}-${String(d).padStart(2,"0")}`;
+      const rec=(S.attendance[day]||{})[r.e.id];
+      const c=cellFor(rec,r.e,day);
+      csv+=","+(rec||isSunday(day)?c.v:"");
     }
-    csv+=`,${r.P},${r.O},${r.Out},${r.A}\n`;
+    csv+=`,${r.P},${r.O},${r.Out},${r.LV},${r.A}\n`;
   });
   return csv;
 }
@@ -243,35 +306,42 @@ function repCSV(n){
   const m=$("rp-m").value,months=n===2?[shiftMonth(m,-1),m]:[m];
   const text=months.map(monthCSV).join("\n");
   dl(`attendance_${months[0]}${n===2?"_to_"+months[1]:""}.csv`,"text/csv",text);
-  showOut(text,"CSV ready — downloaded, or copy it below (paste into Excel).");
+  showOut(text,"CSV ready — downloaded, or copy below (paste into Excel).");
 }
 function backup(){
   const m=$("rp-m").value,months=[shiftMonth(m,-1),m];
   const data={};months.forEach(mo=>{Object.keys(S.attendance).forEach(d=>{if(d.startsWith(mo))data[d]=S.attendance[d];});});
-  const text=JSON.stringify({type:"attendance-backup",company:S.config.company,months,employees:S.employees,attendance:data},null,2);
+  const text=JSON.stringify({type:"attendance-backup",company:S.config.company,months,employees:S.employees,config:S.config,attendance:data},null,2);
   dl(`backup_${todayStr()}_${m}.json`,"application/json",text);
   showOut(text,"Backup ready (2 months) — downloaded, or copy below.");
 }
-
 /* ---------- settings ---------- */
 function renderSet(){
-  const c=S.config;
-  $("t-set").innerHTML=`<h2>Settings</h2><div class="card" style="max-width:560px">
+  const c=S.config,o=c.offices;
+  $("t-set").innerHTML=`<h2>Settings</h2><div class="card" style="max-width:640px">
   <label>Company name</label><input id="st-c" value="${c.company}" style="width:100%">
   <label>GitHub link</label><input id="st-g" value="${c.github}" style="width:100%">
   <label>Rotation cycle start</label><input id="st-s" type="date" value="${c.cycle}">
+  <label>Andheri office GPS (lat, lon)</label>
+  <div class="row" style="margin:0"><input id="st-alat" value="${o.Andheri.lat}" style="width:120px"><input id="st-alon" value="${o.Andheri.lon}" style="width:120px"></div>
+  <label>Ambadi office GPS (lat, lon)</label>
+  <div class="row" style="margin:0"><input id="st-blat" value="${o.Ambadi.lat}" style="width:120px"><input id="st-blon" value="${o.Ambadi.lon}" style="width:120px"></div>
+  <label>Office radius (metres) — inside = Office, outside = Outside</label><input id="st-rad" value="${c.radius}" style="width:120px">
   <div class="row"><button class="btn primary" onclick="saveSet()">Save settings</button>
   <button class="btn" onclick="if(confirm('Reset ALL data?')){lsDel();location.reload();}">Reset data</button></div>
-  <p class="msg" id="st-msg"></p></div>`;
+  <p class="msg" id="st-msg"></p></div>
+  <div class="card" style="max-width:640px"><p class="sub">💡 Put the exact office coordinates (copy from Google Maps) so "at office" detection is exact. Sundays are automatic holidays; 🏖️ Leave is chosen by the employee.</p></div>`;
 }
 function saveSet(){
   S.config.company=$("st-c").value.trim()||S.config.company;
   S.config.github=$("st-g").value.trim()||S.config.github;
   S.config.cycle=$("st-s").value||S.config.cycle;
+  S.config.radius=+$("st-rad").value||S.config.radius;
+  S.config.offices.Andheri={lat:+$("st-alat").value||S.config.offices.Andheri.lat,lon:+$("st-alon").value||S.config.offices.Andheri.lon};
+  S.config.offices.Ambadi={lat:+$("st-blat").value||S.config.offices.Ambadi.lat,lon:+$("st-blon").value||S.config.offices.Ambadi.lon};
   save();chrome();renderSet();
   $("st-msg").textContent="Settings saved.";$("st-msg").className="msg ok";
 }
-
 /* ---------- shell ---------- */
 function chrome(){
   $("hdr").textContent=`🗓️ ${S.config.company} Attendance ${S.config.year}`;
