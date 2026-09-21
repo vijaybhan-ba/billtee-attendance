@@ -87,3 +87,15 @@ git push -u origin main
 * **🏖️ Leave** option for requested holidays (LV in reports).
 * Office GPS coordinates + radius editable in **Settings** (paste exact coordinates
   from Google Maps for perfect detection).
+
+
+## v4 security & sync (live site)
+
+* **Personal secret codes** — every check-in (photo / fingerprint / manual / leave)
+  needs the employee's own code (Vijay 0000, Ajit 1111, Shyam 2222, Nikhat 9999,
+  Nitish 3333, Manish 4444, Anshuman 5555, Sarad 6666). Nobody can mark someone
+  else's attendance.
+* **Admin PIN (default 7777)** — 🔒 Admin button. Only admin can edit Employees /
+  Settings and delete wrong records (✖ on today's list).
+* **Live team feed** — Dashboard shows today's check-ins from ALL phones
+  (sync via a private ntfy.sh topic, editable in Settings).

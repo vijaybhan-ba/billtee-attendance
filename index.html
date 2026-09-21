@@ -26,6 +26,7 @@ td.c,th.c{text-align:center}
 button.btn{background:#e8edf6;border:1px solid #c6d2e6;color:#1c2733;padding:8px 14px;border-radius:7px;font-weight:600;cursor:pointer}
 button.btn:hover{background:#dce6f7}
 button.primary{background:#2f5496;border-color:#2f5496;color:#fff}
+button.danger{background:#f2dcdb;border-color:#d8a6a1;color:#9c2b23}
 input,select{padding:8px;border:1px solid #c6d2e6;border-radius:7px;font-size:.92rem}
 .row{display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap}
 video{width:300px;max-width:100%;border-radius:10px;background:#101826;margin-top:10px;display:block}
@@ -49,6 +50,7 @@ label{font-weight:600;display:block;margin:8px 0 4px}
     <button data-t="emps">Employees</button>
     <button data-t="rep">Reports</button>
     <button data-t="set">Settings</button>
+    <button id="adm-btn" onclick="adminToggle()">🔒 Admin</button>
   </nav>
 </header>
 <main>
@@ -58,12 +60,13 @@ label{font-weight:600;display:block;margin:8px 0 4px}
 <section id="t-rep" class="hidden"></section>
 <section id="t-set" class="hidden"></section>
 </main>
-<footer><span>Rotation: 3 days in office • 3 days outside · Offices: Andheri &amp; Ambadi · Sundays = holiday</span><a id="gh" href="#" target="_blank" rel="noopener"></a></footer>
+<footer><span>Rotation: 3 in office • 3 outside · Andheri &amp; Ambadi · Sunday = holiday · 🔐 code-protected</span><a id="gh" href="#" target="_blank" rel="noopener"></a></footer>
 
 <script>
 "use strict";
-const KEY="billtee_attendance_v3";
+const KEY="billtee_attendance_v4";
 const NAMES=["Ajit","Shyam","Nikhat","Nitish","Manish","Anshuman","Sarad","Vijay"];
+const CODES=[,"1111","2222","9999","3333","4444","5555","6666","0000"];
 let MEM=null;
 function lsGet(){try{return localStorage.getItem(KEY);}catch(e){return MEM;}}
 function lsSet(v){MEM=v;try{localStorage.setItem(KEY,v);}catch(e){}}
@@ -72,13 +75,17 @@ function load(){
   try{const s=JSON.parse(lsGet());if(s&&s.employees)return s;}catch(e){}
   return {
     config:{company:"Billtee",year:"2026-27",github:"https://github.com/vijaybhan-ba/billtee-attendance",cycle:"2026-04-01",
-      offices:{Andheri:{lat:19.1197,lon:72.8464},Ambadi:{lat:19.7577,lon:72.7454}},radius:500},
-    employees:NAMES.map((n,i)=>({id:i+1,name:n,grp:i<4?"A":"B",fp:String(1001+i),loc:[,"Ambadi","Andheri","Andheri","Ambadi","Ambadi","Andheri","Ambadi","Andheri"][i+1],face:null})),
+      offices:{Andheri:{lat:19.1197,lon:72.8464},Ambadi:{lat:19.7577,lon:72.7454}},radius:500,
+      adminPin:"7777",sync:true,topic:"billtee-attendance-vj-2026"},
+    employees:NAMES.map((n,i)=>({id:i+1,name:n,grp:i<4?"A":"B",fp:CODES[i+1],
+      loc:[,"Ambadi","Andheri","Andheri","Ambadi","Ambadi","Andheri","Ambadi","Andheri"][i+1],face:null})),
     attendance:{}
   };
 }
 let S=load();
 function save(){lsSet(JSON.stringify(S));}
+let ADMIN=false;
+try{ADMIN=sessionStorage.getItem("billtee_admin")==="1";}catch(e){}
 const $=id=>document.getElementById(id);
 const todayStr=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");};
 const isSunday=day=>new Date(day+"T00:00:00").getDay()===0;
@@ -116,14 +123,49 @@ async function classify(g,emp){
   if(bd<=rad)return{location:"Office",branch:best,place:best+" office",auto:true};
   return{location:"Outside",branch:emp.loc,place:await reverseName(g),auto:true};
 }
-/* ---------- nav ---------- */
+/* ---------- sync (live feed across phones) ---------- */
+function publish(obj){
+  if(!S.config.sync)return;
+  try{fetch(`https://ntfy.sh/${S.config.topic}`,{method:"POST",body:JSON.stringify(obj)}).catch(()=>{});}catch(e){}
+}
+async function fetchFeed(){
+  try{
+    const r=await fetch(`https://ntfy.sh/${S.config.topic}/json?since=48h`);
+    const txt=await r.text();
+    const out={att:{},del:{}};
+    txt.split("\n").forEach(line=>{
+      if(!line.trim())return;
+      try{
+        const ev=JSON.parse(line);
+        if(!ev.message)return;
+        const m=JSON.parse(ev.message);
+        if(m.type==="att")out.att[m.date+"_"+m.id]=m;
+        if(m.type==="del"){delete out.att[m.date+"_"+m.id];out.del[m.date+"_"+m.id]=1;}
+      }catch(e){}
+    });
+    return out;
+  }catch(e){return {att:{},del:{}};}
+}
+/* ---------- nav / admin ---------- */
+function adminToggle(){
+  if(ADMIN){ADMIN=false;try{sessionStorage.removeItem("billtee_admin");}catch(e){}
+    $("adm-btn").textContent="🔒 Admin";render(curTab());return;}
+  const p=prompt("Admin PIN:");
+  if(p===S.config.adminPin){ADMIN=true;try{sessionStorage.setItem("billtee_admin","1");}catch(e){}
+    $("adm-btn").textContent="🔓 Admin";render(curTab());}
+  else if(p!==null)alert("Wrong PIN.");
+}
+function curTab(){const b=document.querySelector("#nav button.on");return b?b.dataset.t:"dash";}
 $("nav").addEventListener("click",e=>{
-  const b=e.target.closest("button");if(!b)return;
+  const b=e.target.closest("button");if(!b||b.id==="adm-btn")return;
   document.querySelectorAll("#nav button").forEach(x=>x.classList.toggle("on",x===b));
   ["dash","check","emps","rep","set"].forEach(t=>$("t-"+t).classList.toggle("hidden",t!==b.dataset.t));
   render(b.dataset.t);
 });
-/* ---------- dashboard ---------- */
+function lockCard(what){
+  return `<div class="card">🔐 <b>${what} is admin-only.</b> Tap <b>🔒 Admin</b> at the top and enter the admin PIN (default 7777) to edit.</div>`;
+}
+/* ---------- labels ---------- */
 function recLabel(m,e){
   if(!m)return null;
   if(m.location==="…")return "📡 locating…";
@@ -132,9 +174,10 @@ function recLabel(m,e){
   if(m.location==="Leave")return "On leave";
   return m.location;
 }
+/* ---------- dashboard ---------- */
 function renderDash(){
   const t=todayStr(),day=S.attendance[t]||{},sun=isSunday(t);
-  let h=`<h2>Dashboard — ${t}${sun?" (Holiday – Sunday)":""}</h2><p class="sub">Actual recorded place per employee (${S.config.company}).</p>
+  let h=`<h2>Dashboard — ${t}${sun?" (Holiday – Sunday)":""}</h2><p class="sub">This phone's records (${S.config.company}). Live team feed below.</p>
   <table><tr><th class="c">#</th><th>Employee</th><th class="c">Team</th><th class="c">Duty</th><th>Status</th></tr>`;
   S.employees.forEach(e=>{
     const du=duty(e,t),m=day[e.id];
@@ -143,7 +186,20 @@ function renderDash(){
     <td>${m?`<span class="badge ${m.location==="Office"?"done":m.location==="Leave"?"leave":"outside"}">${recLabel(m,e)} · ${m.method} @ ${m.time}</span>${(m.location==="Office")!==(du.location==="Office")&&du.location!=="Holiday"?` <span class="badge absent">duty was: ${du.location}</span>`:""}`
       :sun?`<span class="badge holiday">Holiday</span>`:`<span class="badge absent">Not checked in</span>`}</td></tr>`;
   });
-  $("t-dash").innerHTML=h+"</table>";
+  h+=`</table><h3>🌐 Live team today (all phones)</h3><div id="feed"><p class="sub">Loading…</p></div>`;
+  $("t-dash").innerHTML=h;
+  loadFeed();
+}
+async function loadFeed(){
+  const feed=await fetchFeed(),t=todayStr();
+  const rows=Object.values(feed.att).filter(m=>m.date===t).sort((a,b)=>a.time<b.time?-1:1);
+  let h=`<table><tr><th class="c">#</th><th>Name</th><th class="c">Time</th><th class="c">Method</th><th>Location (auto)</th></tr>`;
+  if(!rows.length)h+=`<tr><td colspan="5" class="c">No check-ins from any phone yet today.</td></tr>`;
+  rows.forEach(m=>{
+    h+=`<tr><td class="c">${m.id}</td><td>${m.name}</td><td class="c">${m.time}</td><td class="c">${m.method}</td><td><span class="badge ${m.location==="Office"?"office":m.location==="Leave"?"leave":"outside"}">${m.location==="Office"?"Office – "+m.branch:m.location==="Leave"?"On leave":"Outside"+(m.place?" – "+m.place:"")}</span></td></tr>`;
+  });
+  h+="</table>";
+  const f=$("feed");if(f)f.innerHTML=h;
 }
 /* ---------- check-in ---------- */
 let stream=null;
@@ -152,24 +208,30 @@ function renderCheck(){
   let h=`<h2>Check-In — ${t}${isSunday(t)?" (Holiday – Sunday)":""}</h2><div class="card">
   <label>Employee</label><select id="ck-emp">${S.employees.map(e=>`<option value="${e.id}">${e.id}. ${e.name}</option>`).join("")}</select>
   <p class="msg ok" id="ck-duty"></p>
+  <label>🔐 ${""/*private*/}Your secret code (only ${""}you know it)</label>
+  <input id="ck-code" placeholder="e.g. 0000" inputmode="numeric" style="width:140px">
   <label>Where are you now? (used only if GPS is unavailable)</label>
   <select id="ck-loc"><option value="outside" selected>🌆 Outside (not at my office)</option><option id="ck-loc-office" value="office">🏢 At my office</option></select>
   <video id="cam" autoplay playsinline muted></video>
   <div class="row"><button class="btn" onclick="camStart()">🎥 Start Camera</button>
-  <button class="btn primary" onclick="faceIn()">📸 Live Photo + Auto Location Check-In</button></div>
-  <div class="row"><input id="ck-fp" placeholder="Fingerprint code" inputmode="numeric" style="width:140px">
-  <button class="btn" onclick="fpIn()">👆 Fingerprint</button>
+  <button class="btn primary" onclick="faceIn()">📸 Live Photo + Auto Location</button></div>
+  <div class="row"><button class="btn" onclick="fpIn()">👆 Fingerprint</button>
   <button class="btn" onclick="manualIn()">✍️ Manual</button>
   <button class="btn" onclick="leaveIn()">🏖️ Leave</button></div>
   <p class="msg" id="ck-msg"></p></div>
-  <h3>Already checked in today</h3><table><tr><th class="c">#</th><th>Name</th><th class="c">Time</th><th class="c">Method</th><th class="c">Location (auto)</th><th class="c">Face photo</th></tr>`;
-  S.employees.forEach(e=>{const m=day[e.id];if(m)h+=`<tr><td class="c">${e.id}</td><td>${e.name}</td><td class="c">${m.time}</td><td class="c">${m.method}</td><td class="c"><span class="badge ${m.location==="Office"?"office":m.location==="Leave"?"leave":"outside"}">${recLabel(m,e)}</span></td><td class="c">${m.photo?`<img src="${m.photo}" style="height:38px;border-radius:6px">`:"—"}</td></tr>`;});
+  <h3>Already checked in today (this phone)</h3><table><tr><th class="c">#</th><th>Name</th><th class="c">Time</th><th class="c">Method</th><th class="c">Location (auto)</th><th class="c">Photo</th>${ADMIN?'<th class="c">✖</th>':""}</tr>`;
+  S.employees.forEach(e=>{const m=day[e.id];if(m)h+=`<tr><td class="c">${e.id}</td><td>${e.name}</td><td class="c">${m.time}</td><td class="c">${m.method}</td><td class="c"><span class="badge ${m.location==="Office"?"office":m.location==="Leave"?"leave":"outside"}">${recLabel(m,e)}</span></td><td class="c">${m.photo?`<img src="${m.photo}" style="height:38px;border-radius:6px">`:"—"}</td>${ADMIN?`<td class="c"><button class="btn danger" onclick="delRec(${e.id})">✖</button></td>`:""}</tr>`;});
   h+=`</table>`;
   $("t-check").innerHTML=h;
   $("ck-emp").onchange=showDuty;showDuty();
 }
 function showDuty(){const e=S.employees.find(x=>x.id==+$("ck-emp").value);$("ck-duty").textContent="Today's duty: "+duty(e,todayStr()).label;const o=$("ck-loc-office");if(o)o.textContent="🏢 At "+e.loc+" office (I am really here)";}
 function curEmp(){return S.employees.find(x=>x.id==+$("ck-emp").value);}
+function checkCode(emp){
+  const c=($("ck-code")?$("ck-code").value:"").trim();
+  if(c!==emp.fp){const m=$("ck-msg");m.textContent=`🔐 Wrong secret code for ${emp.name}. Only ${emp.name} knows it — nobody else can mark ${emp.name}'s attendance.`;m.className="msg err";return false;}
+  return true;
+}
 async function autoPlace(emp){
   const g=await getGeo();
   if(g)return classify(g,emp);
@@ -181,21 +243,32 @@ function put(emp,rec){
   (S.attendance[t]||(S.attendance[t]={}))[emp.id]=rec;
   if(rec.photo)emp.face=rec.photo;
   save();
+  publish({type:"att",date:t,id:emp.id,name:emp.name,time:rec.time,method:rec.method,
+    location:rec.location==="…"?"Outside":rec.location,branch:rec.branch,place:rec.place});
+}
+function delRec(id){
+  if(!ADMIN)return;
+  const t=todayStr();
+  if(S.attendance[t]&&S.attendance[t][id]){
+    const e=S.employees.find(x=>x.id===id);
+    delete S.attendance[t][id];save();
+    publish({type:"del",date:t,id});
+    const m=$("ck-msg");m.textContent=`🗑️ Admin removed ${e.name}'s record for ${t}.`;m.className="msg ok";
+    renderCheck();
+  }
 }
 async function checkIn(method,img){
   const emp=curEmp();
+  if(!checkCode(emp))return;
   const rec={time:new Date().toTimeString().slice(0,8),method,photo:img,
     location:"…",branch:emp.loc,place:"📡 locating…",auto:false};
   put(emp,rec);renderCheck();
   const m=$("ck-msg");m.textContent=`✔ ${emp.name} present — 📡 fetching location…`;m.className="msg ok";
   const pl=await autoPlace(emp);
   Object.assign(rec,pl);save();
+  publish({type:"att",date:todayStr(),id:emp.id,name:emp.name,time:rec.time,method:rec.method,location:rec.location,branch:rec.branch,place:rec.place});
   const mm=$("ck-msg");mm.textContent=`✔ ${emp.name} present — ${recLabel(rec,emp)} at ${rec.time.slice(0,5)}${pl.auto?" (auto)":""}.`;mm.className="msg ok";
   setTimeout(()=>renderCheck(),400);
-}
-function camStart(){
-  if(!navigator.mediaDevices){const m=$("ck-msg");m.textContent="No camera here — download this file and open in your browser for camera+GPS.";m.className="msg err";return;}
-  navigator.mediaDevices.getUserMedia({video:{facingMode:"user"}}).then(s=>{stream=s;$("cam").srcObject=s;}).catch(()=>{const m=$("ck-msg");m.textContent="Camera blocked — use fingerprint/manual.";m.className="msg err";});
 }
 async function faceIn(){
   const v=$("cam");if(!v.videoWidth){const m=$("ck-msg");m.textContent="Start the camera first.";m.className="msg err";return;}
@@ -204,21 +277,25 @@ async function faceIn(){
   checkIn("face",img);
 }
 async function fpIn(){
-  const emp=curEmp(),m=$("ck-msg");
-  if($("ck-fp").value.trim()!==emp.fp){m.textContent="Fingerprint code does not match.";m.className="msg err";return;}
+  const emp=curEmp();if(!checkCode(emp))return;
   checkIn("fingerprint",null);
 }
 async function manualIn(){checkIn("manual",null);}
-function leaveIn(){
-  const emp=curEmp();
+async function leaveIn(){
+  const emp=curEmp();if(!checkCode(emp))return;
   put(emp,{time:new Date().toTimeString().slice(0,8),method:"leave",location:"Leave",branch:emp.loc,place:null,photo:null,auto:false});
   const m=$("ck-msg");m.textContent=`🏖️ ${emp.name} — On leave.`;m.className="msg ok";
   setTimeout(()=>renderCheck(),400);
 }
-/* ---------- employees ---------- */
+function camStart(){
+  if(!navigator.mediaDevices){const m=$("ck-msg");m.textContent="No camera here — download this file and open in your browser for camera+GPS.";m.className="msg err";return;}
+  navigator.mediaDevices.getUserMedia({video:{facingMode:"user"}}).then(s=>{stream=s;$("cam").srcObject=s;}).catch(()=>{const m=$("ck-msg");m.textContent="Camera blocked.";m.className="msg err";});
+}
+/* ---------- employees (admin) ---------- */
 function renderEmps(){
-  let h=`<h2>Employees</h2><p class="sub">Team / main office / fingerprint code — saves instantly.</p>
-  <table><tr><th class="c">#</th><th>Name</th><th class="c">Team</th><th class="c">Main office</th><th>Fingerprint</th><th class="c">Face</th></tr>`;
+  if(!ADMIN){$("t-emps").innerHTML=lockCard("Employees");return;}
+  let h=`<h2>Employees (admin)</h2><p class="sub">Secret codes prevent anyone else marking someone's attendance.</p>
+  <table><tr><th class="c">#</th><th>Name</th><th class="c">Team</th><th class="c">Main office</th><th>Secret code</th><th class="c">Face</th></tr>`;
   S.employees.forEach(e=>{
     h+=`<tr><td class="c">${e.id}</td><td>${e.name}</td>
     <td class="c"><select onchange="updEmp(${e.id},{grp:this.value})"><option ${e.grp==="A"?"selected":""}>A</option><option ${e.grp==="B"?"selected":""}>B</option></select></td>
@@ -228,7 +305,7 @@ function renderEmps(){
   });
   $("t-emps").innerHTML=h+"</table>";
 }
-function updEmp(id,patch){const e=S.employees.find(x=>x.id===id);Object.assign(e,patch);save();renderEmps();}
+function updEmp(id,patch){if(!ADMIN)return;const e=S.employees.find(x=>x.id===id);Object.assign(e,patch);save();renderEmps();}
 function enrollPrompt(id){
   const e=S.employees.find(x=>x.id===id);
   if(!navigator.mediaDevices){alert("No camera in this viewer. Download this file and open in your browser to enroll faces.");return;}
@@ -249,7 +326,7 @@ function renderRep(){
   <button class="btn" onclick="repCSV(1)">⬇️ Excel CSV — 1 month</button>
   <button class="btn" onclick="repCSV(2)">⬇️ Excel CSV — 2 months</button>
   <button class="btn" onclick="backup()">💾 Backup — 2 months (JSON)</button></div>
-  <p class="sub">AND = Andheri · AMB = Ambadi · OUT = outside (place shown on hover) · LV = leave · H = Sunday holiday · — = absent</p>
+  <p class="sub">AND = Andheri · AMB = Ambadi · OUT = outside · LV = leave · H = Sunday · — = absent</p>
   <div id="rp-grid" style="overflow-x:auto"></div><div id="rp-msg" class="msg"></div>
   <pre id="rp-out" style="display:none;max-height:220px;overflow:auto;background:#101826;color:#cfe3ff;border-radius:8px;padding:8px;margin-top:10px;font-size:.7rem"></pre>`;
   repGrid();
@@ -320,28 +397,33 @@ function backup(){
   dl(`backup_${todayStr()}_${m}.json`,"application/json",text);
   showOut(text,"Backup ready (2 months) — downloaded, or copy below.");
 }
-/* ---------- settings ---------- */
+/* ---------- settings (admin) ---------- */
 function renderSet(){
+  if(!ADMIN){$("t-set").innerHTML=lockCard("Settings");return;}
   const c=S.config,o=c.offices;
-  $("t-set").innerHTML=`<h2>Settings</h2><div class="card" style="max-width:640px">
+  $("t-set").innerHTML=`<h2>Settings (admin)</h2><div class="card" style="max-width:640px">
   <label>Company name</label><input id="st-c" value="${c.company}" style="width:100%">
   <label>GitHub link</label><input id="st-g" value="${c.github}" style="width:100%">
   <label>Rotation cycle start</label><input id="st-s" type="date" value="${c.cycle}">
+  <label>🔐 Admin PIN</label><input id="st-pin" value="${c.adminPin}" style="width:120px">
   <label>Andheri office GPS (lat, lon)</label>
   <div class="row" style="margin:0"><input id="st-alat" value="${o.Andheri.lat}" style="width:120px"><input id="st-alon" value="${o.Andheri.lon}" style="width:120px"></div>
   <label>Ambadi office GPS (lat, lon)</label>
   <div class="row" style="margin:0"><input id="st-blat" value="${o.Ambadi.lat}" style="width:120px"><input id="st-blon" value="${o.Ambadi.lon}" style="width:120px"></div>
-  <label>Office radius (metres) — inside = Office, outside = Outside</label><input id="st-rad" value="${c.radius}" style="width:120px">
+  <label>Office radius (metres)</label><input id="st-rad" value="${c.radius}" style="width:120px">
+  <label>Live sync topic (all phones must match)</label><input id="st-top" value="${c.topic}" style="width:100%">
   <div class="row"><button class="btn primary" onclick="saveSet()">Save settings</button>
   <button class="btn" onclick="if(confirm('Reset ALL data?')){lsDel();location.reload();}">Reset data</button></div>
-  <p class="msg" id="st-msg"></p></div>
-  <div class="card" style="max-width:640px"><p class="sub">💡 Put the exact office coordinates (copy from Google Maps) so "at office" detection is exact. Sundays are automatic holidays; 🏖️ Leave is chosen by the employee.</p></div>`;
+  <p class="msg" id="st-msg"></p></div>`;
 }
 function saveSet(){
+  if(!ADMIN)return;
   S.config.company=$("st-c").value.trim()||S.config.company;
   S.config.github=$("st-g").value.trim()||S.config.github;
   S.config.cycle=$("st-s").value||S.config.cycle;
+  S.config.adminPin=$("st-pin").value.trim()||S.config.adminPin;
   S.config.radius=+$("st-rad").value||S.config.radius;
+  S.config.topic=$("st-top").value.trim()||S.config.topic;
   S.config.offices.Andheri={lat:+$("st-alat").value||S.config.offices.Andheri.lat,lon:+$("st-alon").value||S.config.offices.Andheri.lon};
   S.config.offices.Ambadi={lat:+$("st-blat").value||S.config.offices.Ambadi.lat,lon:+$("st-blon").value||S.config.offices.Ambadi.lon};
   save();chrome();renderSet();
@@ -352,6 +434,7 @@ function chrome(){
   $("hdr").textContent=`🗓️ ${S.config.company} Attendance ${S.config.year}`;
   document.title=`${S.config.company} Attendance ${S.config.year}`;
   const g=$("gh");g.textContent="GitHub project ↗";g.href=S.config.github;
+  const a=$("adm-btn");if(a)a.textContent=ADMIN?"🔓 Admin":"🔒 Admin";
 }
 function render(t){({dash:renderDash,check:renderCheck,emps:renderEmps,rep:renderRep,set:renderSet})[t]();}
 chrome();renderDash();
