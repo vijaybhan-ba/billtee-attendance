@@ -158,7 +158,7 @@ async function loadFeed(){
   let h=`<table><tr><th class="c">#</th><th>Name</th><th class="c">Time</th><th class="c">Method</th><th>Location (live GPS)</th></tr>`;
   if(!rows.length)h+=`<tr><td colspan="5" class="c">No check-ins from any phone yet today.</td></tr>`;
   rows.forEach(m=>{
-    const lbl=m.location==="Office"?"Office – "+m.branch:m.location==="Leave"?"On leave":m.location==="…"?"📡 locating…":"Outside"+(m.place?" – "+m.place:"");
+    const lbl=m.location==="Office"?"Office – "+m.branch:m.location==="Leave"?"On leave – "+(LVN[m.lv]||"LV"):m.location==="…"?"📡 locating…":"Outside"+(m.place?" – "+m.place:"");
     h+=`<tr><td class="c">${m.id}</td><td>${m.name}</td><td class="c">${m.time}</td><td class="c">${m.method}</td><td><span class="badge ${m.location==="Office"?"office":m.location==="Leave"?"leave":"outside"}">${lbl}</span></td></tr>`;
   });
   box.innerHTML=h+"</table>";
@@ -188,7 +188,7 @@ function recLabel(m,e){
   if(m.location==="…")return "📡 locating…";
   if(m.location==="Office")return "Office – "+(m.branch||e.loc);
   if(m.location==="Outside")return "Outside"+(m.place?" – "+m.place:"");
-  if(m.location==="Leave")return "On leave";
+  if(m.location==="Leave")return "On leave ("+(LVN[m.lv]||"LV")+")";
   return m.location;
 }
 /* ---------- dashboard ---------- */
@@ -221,7 +221,10 @@ function renderCheck(){
   <video id="cam" autoplay playsinline muted></video>
   <div class="row"><button class="btn" onclick="camStart()">🎥 Start Camera</button>
   <button class="btn primary" onclick="faceIn()">📸 Face Capture + Live Location</button></div>
-  <div class="row"><button class="btn" onclick="leaveIn()">🏖️ Leave</button></div>
+  <div class="row"><span style="font-weight:600">🏖️ Leave — choose type:</span>
+  <button class="btn" onclick="leaveIn('SL')">🤒 Sick</button>
+  <button class="btn" onclick="leaveIn('PL')">📅 Planned</button>
+  <button class="btn" onclick="leaveIn('CL')">🏖️ Casual</button></div>
   <p class="msg" id="ck-msg"></p></div>
   <h3>Already checked in today (this phone)</h3><table><tr><th class="c">#</th><th>Name</th><th class="c">Time</th><th class="c">Method</th><th class="c">Location (auto)</th><th class="c">Photo</th>${ADMIN?'<th class="c">✖</th>':""}</tr>`;
   S.employees.forEach(e=>{const m=day[e.id];if(m)h+=`<tr><td class="c">${e.id}</td><td>${e.name}</td><td class="c">${m.time}</td><td class="c">${m.method}</td><td class="c"><span class="badge ${m.location==="Office"?"office":m.location==="Leave"?"leave":"outside"}">${recLabel(m,e)}</span></td><td class="c">${m.photo?`<img src="${m.photo}" style="height:38px;border-radius:6px">`:"—"}</td>${ADMIN?`<td class="c"><button class="btn danger" onclick="delRec(${e.id})">✖</button></td>`:""}</tr>`;});
@@ -292,15 +295,17 @@ async function faceIn(){
   let img=null;try{img=c.toDataURL("image/jpeg",.6);}catch(e){}
   checkIn("face",img);
 }
-async function leaveIn(){
+async function leaveIn(lv){
   const emp=curEmp();if(!checkCode(emp))return;
   const t=todayStr();
   const dup=await dupBlock(emp,t);
   if(dup){const m=$("ck-msg");m.textContent=dup;m.className="msg err";return;}
-  put(emp,{time:new Date().toTimeString().slice(0,8),method:"leave",location:"Leave",branch:emp.loc,place:null,photo:null,auto:false});
-  const m=$("ck-msg");m.textContent=`🏖️ ${emp.name} — On leave.`;m.className="msg ok";
+  const names={SL:"Sick leave",PL:"Planned leave",CL:"Casual leave"};
+  put(emp,{time:new Date().toTimeString().slice(0,8),method:"leave",location:"Leave",lv:lv||"LV",branch:emp.loc,place:names[lv]||"leave",photo:null,auto:false});
+  const m=$("ck-msg");m.textContent=`🏖️ ${emp.name} — ${names[lv]||"leave"} recorded automatically in reports.`;m.className="msg ok";
   setTimeout(()=>renderCheck(),400);
 }
+const LVN={SL:"Sick",PL:"Planned",CL:"Casual",LV:"Leave"};
 function camStart(){
   if(!navigator.mediaDevices){const m=$("ck-msg");m.textContent="No camera here — download this file and open in your browser for camera+GPS.";m.className="msg err";return;}
   navigator.mediaDevices.getUserMedia({video:{facingMode:"user"}}).then(s=>{stream=s;$("cam").srcObject=s;}).catch(()=>{const m=$("ck-msg");m.textContent="Camera blocked.";m.className="msg err";});
@@ -341,7 +346,7 @@ function renderRep(){
   <button class="btn" onclick="repCSV(1)">⬇️ Excel CSV — 1 month</button>
   <button class="btn" onclick="repCSV(2)">⬇️ Excel CSV — 2 months</button>
   <button class="btn" onclick="backup()">💾 Backup — 2 months (JSON)</button></div>
-  <p class="sub">AND = Andheri · AMB = Ambadi · OUT = outside · LV = leave · H = Sunday · — = absent</p>
+  <p class="sub">AND = Andheri · AMB = Ambadi · OUT = outside · SL = sick leave · PL = planned · CL = casual · H = Sunday · — = absent</p>
   <div id="rp-grid" style="overflow-x:auto"></div><div id="rp-msg" class="msg"></div>
   <pre id="rp-out" style="display:none;max-height:220px;overflow:auto;background:#101826;color:#cfe3ff;border-radius:8px;padding:8px;margin-top:10px;font-size:.7rem"></pre>`;
   repGrid();
@@ -350,7 +355,7 @@ function cellFor(rec,e,day){
   if(rec&&rec.location==="…")return{v:"…",cls:"out",t:"locating…"};
   if(rec){
     if(rec.location==="Office")return{v:(rec.branch||e.loc)==="Andheri"?"AND":"AMB",cls:"in",t:rec.method+" @ "+rec.time};
-    if(rec.location==="Leave")return{v:"LV",cls:"lv",t:"leave"};
+    if(rec.location==="Leave")return{v:rec.lv||"LV",cls:"lv",t:(LVN[rec.lv]||"")+" leave"};
     return{v:"OUT",cls:"out",t:(rec.place||"outside")+" · "+rec.method+" @ "+rec.time};
   }
   if(isSunday(day))return{v:"H",cls:"hol",t:"Sunday holiday"};

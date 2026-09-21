@@ -110,3 +110,11 @@ git push -u origin main
 * **PIN never displayed** — lock screens no longer print the admin PIN; employee
   secret codes are masked (👁 to reveal, admin only).
 * Live team list now also appears on the Check-In screen and refreshes every 30 s.
+
+
+## v6 leave types
+
+Leave is a one-tap choice: 🤒 Sick (SL) · 📅 Planned (PL) · 🏖️ Casual (CL).
+The chosen one-word code appears in records, the live feed, reports and CSV
+automatically. Taking leave also locks that person's attendance for the day
+(1 person = 1 entry/day).
