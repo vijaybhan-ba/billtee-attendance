@@ -99,3 +99,14 @@ git push -u origin main
   Settings and delete wrong records (✖ on today's list).
 * **Live team feed** — Dashboard shows today's check-ins from ALL phones
   (sync via a private ntfy.sh topic, editable in Settings).
+
+
+## v5 anti-fraud rules (live site)
+
+* **Face-capture only** — Manual & Fingerprint removed.
+* **1 person = 1 attendance/day, across ALL phones** — a second check-in for the
+  same person (same or another phone) is refused with "already enrolled today".
+  Only the admin's delete (✖) re-allows it.
+* **PIN never displayed** — lock screens no longer print the admin PIN; employee
+  secret codes are masked (👁 to reveal, admin only).
+* Live team list now also appears on the Check-In screen and refreshes every 30 s.
