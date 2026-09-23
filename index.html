@@ -248,6 +248,12 @@ async function loadFeed(){
   });
   rows=rows.filter(r=>!(DB.dels||{})[t+"_"+r.id]);
   rows.sort((a,b)=>a.time<b.time?-1:1);
+  const dayObj=(S.attendance[t]||(S.attendance[t]={}));
+  let merged=false;
+  rows.forEach(r=>{if(!dayObj[r.id]){dayObj[r.id]={time:r.time,method:r.method,location:r.location,branch:r.branch,place:r.place,lv:r.lv,thumb:r.thumb,remote:true};merged=true;}});
+  if(merged)save();
+  const dt=$("dash-table");if(dt)dt.innerHTML=dashTableHTML();
+  const cl=$("ck-lists");if(cl)cl.innerHTML=checkListsHTML();
   let h=`<table><tr><th class="c">#</th><th>Name</th><th class="c">Time</th><th class="c">Method</th><th>Location (live GPS)</th><th class="c">Face</th></tr>`;
   if(!rows.length)h+=`<tr><td colspan="6" class="c">Nobody yet today.</td></tr>`;
   rows.forEach(m=>{
@@ -286,10 +292,9 @@ function recLabel(m,e){
   return m.location;
 }
 /* ---------- dashboard ---------- */
-function renderDash(){
+function dashTableHTML(){
   const t=todayStr(),day=S.attendance[t]||{},sun=isSunday(t);
-  let h=`<h2>Dashboard — ${t}${sun?" (Holiday – Sunday)":""}</h2><p class="sub">Shared register: every phone sees the same present/absent list.</p>
-  <table><tr><th class="c">#</th><th>Employee</th><th class="c">Duty</th><th>Status (all phones)</th></tr>`;
+  let h=`<table><tr><th class="c">#</th><th>Employee</th><th class="c">Duty</th><th>Status (all phones)</th></tr>`;
   S.employees.forEach(e=>{
     const du=duty(e,t),m=day[e.id];
     h+=`<tr><td class="c">${e.id}</td><td>${e.name}</td>
@@ -297,15 +302,32 @@ function renderDash(){
     <td>${m?`<span class="badge ${m.location==="Office"?"done":m.location==="Leave"?"leave":"outside"}">${recLabel(m,e)} · ${m.method} @ ${m.time}</span>${(m.location==="Office")!==(du.location==="Office")&&du.location!=="Holiday"?` <span class="badge absent">duty was: ${du.location}</span>`:""}`
       :sun?`<span class="badge holiday">Holiday</span>`:`<span class="badge absent">Not present / absent</span>`}</td></tr>`;
   });
-  h+=`</table><h3>🌐 Present today (live, all phones)</h3><div id="feed"><p class="sub">Loading…</p></div>`;
-  $("t-dash").innerHTML=h;
+  return h+"</table>";
+}
+function renderDash(){
+  const t=todayStr(),sun=isSunday(t);
+  $("t-dash").innerHTML=`<h2>Dashboard — ${t}${sun?" (Holiday – Sunday)":""}</h2><p class="sub">Shared register: every phone sees the same present/absent list.</p><div id="dash-table">${dashTableHTML()}</div><h3>🌐 Present today (live, all phones)</h3><div id="feed"><p class="sub">Loading…</p></div>`;
   loadFeed();
 }
 /* ---------- check-in ---------- */
 let stream=null;
 async function doSync(){await syncNow();render(curTab());const m=$("rp-msg")||$("st-msg");if(m){m.textContent="Shared register synced.";m.className="msg ok";}}
-function renderCheck(){
+function checkListsHTML(){
   const t=todayStr(),day=S.attendance[t]||{};
+  let h=`<h3>Today's entries (all phones)</h3><table><tr><th class="c">#</th><th>Name</th><th class="c">Time</th><th class="c">Method</th><th class="c">Location (auto)</th><th class="c">Face</th></tr>`;
+  S.employees.forEach(e=>{const m=day[e.id];if(m)h+=`<tr><td class="c">${e.id}</td><td>${e.name}</td><td class="c">${m.time}</td><td class="c">${m.method}</td><td class="c"><span class="badge ${m.location==="Office"?"office":m.location==="Leave"?"leave":"outside"}">${recLabel(m,e)}</span></td><td class="c">${m.photo||m.thumb?`<img class="face" src="${m.photo||m.thumb}">`:"—"}</td></tr>`;});
+  h+="</table>";
+  if(ADMIN){h+=`<div class="row"><select id="del-emp">${S.employees.map(e=>`<option value="${e.id}">${e.id}. ${e.name}</option>`).join("")}</select><button class="btn danger" onclick="delSel()">🗑 Remove today's entry (admin)</button></div>`;}
+  let ups=[];
+  for(const[d2,recs]of Object.entries(S.attendance)){if(d2>=t)for(const[id,r]of Object.entries(recs)){if(r.location==="Leave"&&r.lv==="PL")ups.push({day:d2,id:+id});}}
+  ups.sort((a,b)=>a.day<b.day?-1:1);
+  if(ups.length){h+=`<h3>📅 Planned leaves (today & future)</h3><table><tr><th>Date</th><th class="c">#</th><th>Name</th><th class="c">Action</th></tr>`;
+    ups.forEach(u=>{const e=S.employees.find(x=>x.id===u.id);h+=`<tr><td>${u.day}</td><td class="c">${u.id}</td><td>${e?e.name:"?"}</td><td class="c"><button class="btn" onclick="setDateCancel('${u.day}',${u.id})">❌ Cancel (with ${e?e.name:""}'s code)</button></td></tr>`;});
+    h+="</table>";}
+  return h;
+}
+function renderCheck(){
+  const t=todayStr();
   let h=`<h2>Check-In — ${t}${isSunday(t)?" (Holiday – Sunday)":""}</h2><div class="card">
   <label>Employee</label><select id="ck-emp">${S.employees.map(e=>`<option value="${e.id}">${e.id}. ${e.name}</option>`).join("")}</select>
   <p class="msg ok" id="ck-duty"></p>
@@ -323,16 +345,8 @@ function renderCheck(){
   <button class="btn" onclick="leaveIn('CL')">🏖️ Casual</button>
   <button class="btn" onclick="cancelPL()">❌ Cancel Planned Leave</button></div>
   <p class="msg" id="ck-msg"></p></div>
-  <h3>Today's entries (all phones)</h3><table><tr><th class="c">#</th><th>Name</th><th class="c">Time</th><th class="c">Method</th><th class="c">Location (auto)</th><th class="c">Face</th></tr>`;
-  S.employees.forEach(e=>{const m=day[e.id];if(m)h+=`<tr><td class="c">${e.id}</td><td>${e.name}</td><td class="c">${m.time}</td><td class="c">${m.method}</td><td class="c"><span class="badge ${m.location==="Office"?"office":m.location==="Leave"?"leave":"outside"}">${recLabel(m,e)}</span></td><td class="c">${m.photo||m.thumb?`<img class="face" src="${m.photo||m.thumb}">`:"—"}</td></tr>`;});
-  if(ADMIN){h+=`<div class="row"><select id="del-emp">${S.employees.map(e=>`<option value="${e.id}">${e.id}. ${e.name}</option>`).join("")}</select><button class="btn danger" onclick="delSel()">🗑 Remove today's entry (admin)</button></div>`;}
-  let ups=[];
-  for(const[day,recs]of Object.entries(S.attendance)){if(day>=t)for(const[id,r]of Object.entries(recs)){if(r.location==="Leave"&&r.lv==="PL")ups.push({day,id:+id});}}
-  ups.sort((a,b)=>a.day<b.day?-1:1);
-  if(ups.length){h+=`<h3>📅 Planned leaves (today & future)</h3><table><tr><th>Date</th><th class="c">#</th><th>Name</th><th class="c">Action</th></tr>`;
-    ups.forEach(u=>{const e=S.employees.find(x=>x.id===u.id);h+=`<tr><td>${u.day}</td><td class="c">${u.id}</td><td>${e?e.name:"?"}</td><td class="c"><button class="btn" onclick="setDateCancel('${u.day}',${u.id})">❌ Cancel (with ${e?e.name:""}'s code)</button></td></tr>`;});
-    h+="</table>";}
-  h+=`<h3>🌐 Live team today (all phones)</h3><div id="feed"><p class="sub">Loading…</p></div>`;
+  <div id="ck-lists">${checkListsHTML()}</div>
+  <h3>🌐 Live team today (all phones)</h3><div id="feed"><p class="sub">Loading…</p></div>`;
   $("t-check").innerHTML=h;
   $("ck-emp").onchange=showDuty;showDuty();
   loadFeed();

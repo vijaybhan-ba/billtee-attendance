@@ -154,3 +154,10 @@ automatically. Taking leave also locks that person's attendance for the day
 * Dashboard: Team column removed; outside duty shows "Outside – Andheri/Ambadi".
 * No ✖ next to photos; admin removes wrong entries via the
   "🗑 Remove today's entry" select under the entries table.
+
+
+## v10
+
+* The live feed now also fills the Dashboard status table and the Check-In
+  entries list, so a person who checked in on another phone immediately shows
+  PRESENT everywhere (and is saved locally for reports).
