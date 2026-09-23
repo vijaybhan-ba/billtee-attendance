@@ -145,3 +145,12 @@ automatically. Taking leave also locks that person's attendance for the day
 * Admin: ➕ Add employee (auto 4-digit code), 🧹 Close past & start fresh
   (downloads backup first). Present/absent changes remain admin-only; employees
   can only take/cancel their own planned leave with their code.
+
+
+## v9 (23 Sep 2026)
+
+* Ambadi office GPS fixed to Manjula Complex, Ambadi Naka, Wada–Bhiwandi Rd
+  (19.4733, 73.0876). Both office coordinates auto-update on every phone.
+* Dashboard: Team column removed; outside duty shows "Outside – Andheri/Ambadi".
+* No ✖ next to photos; admin removes wrong entries via the
+  "🗑 Remove today's entry" select under the entries table.

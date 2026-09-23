@@ -76,7 +76,7 @@ function lsDel(){MEM=null;try{localStorage.removeItem(KEY);}catch(e){}}
 function freshState(){
   return {
     config:{company:"Billtee",year:"2026-27",github:"https://github.com/"+REPO,cycle:"2026-04-01",
-      offices:{Andheri:{lat:19.1117,lon:72.8546},Ambadi:{lat:19.7577,lon:72.7454}},radius:300,cfgVer:2,
+      offices:{Andheri:{lat:19.1117,lon:72.8546},Ambadi:{lat:19.4733,lon:73.0876}},radius:300,cfgVer:3,
       adminPin:"7777",sync:true,topic:"billtee-attendance-vj-2026",token:""},
     employees:NAMES.map((n,i)=>({id:i+1,name:n,grp:i<4?"A":"B",fp:CODES[i+1],
       loc:[,"Ambadi","Andheri","Andheri","Ambadi","Ambadi","Andheri","Ambadi","Andheri"][i+1],face:null})),
@@ -97,7 +97,7 @@ function load(){
   return freshState();
 }
 let S=load();
-if(!S.config.cfgVer||S.config.cfgVer<2){S.config.offices.Andheri={lat:19.1117,lon:72.8546};S.config.radius=300;S.config.cfgVer=2;}
+if(!S.config.cfgVer||S.config.cfgVer<3){S.config.offices.Andheri={lat:19.1117,lon:72.8546};S.config.offices.Ambadi={lat:19.4733,lon:73.0876};S.config.radius=300;S.config.cfgVer=3;}
 function save(){lsSet(JSON.stringify(S));}
 let ADMIN=false;
 try{ADMIN=sessionStorage.getItem("billtee_admin")==="1";}catch(e){}
@@ -110,7 +110,7 @@ function duty(emp,day){
   const start=new Date(S.config.cycle+"T00:00:00"),d=new Date(day+"T00:00:00");
   const pos=Math.round((d-start)/864e5)%6,aIn=pos<3;
   const office=emp.grp==="A"?aIn:!aIn;
-  return office?{location:"Office",label:"Office – "+emp.loc}:{location:"Outside",label:"Outside"};
+  return office?{location:"Office",label:"Office – "+emp.loc}:{location:"Outside",label:"Outside – "+emp.loc};
 }
 function dl(name,mime,text){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([text],{type:mime}));a.download=name;a.click();}
 /* ---------- geo ---------- */
@@ -289,10 +289,10 @@ function recLabel(m,e){
 function renderDash(){
   const t=todayStr(),day=S.attendance[t]||{},sun=isSunday(t);
   let h=`<h2>Dashboard — ${t}${sun?" (Holiday – Sunday)":""}</h2><p class="sub">Shared register: every phone sees the same present/absent list.</p>
-  <table><tr><th class="c">#</th><th>Employee</th><th class="c">Team</th><th class="c">Duty</th><th>Status (all phones)</th></tr>`;
+  <table><tr><th class="c">#</th><th>Employee</th><th class="c">Duty</th><th>Status (all phones)</th></tr>`;
   S.employees.forEach(e=>{
     const du=duty(e,t),m=day[e.id];
-    h+=`<tr><td class="c">${e.id}</td><td>${e.name}</td><td class="c">${e.grp}</td>
+    h+=`<tr><td class="c">${e.id}</td><td>${e.name}</td>
     <td class="c"><span class="badge ${du.location==="Office"?"office":du.location==="Holiday"?"holiday":"outside"}">${du.label}</span></td>
     <td>${m?`<span class="badge ${m.location==="Office"?"done":m.location==="Leave"?"leave":"outside"}">${recLabel(m,e)} · ${m.method} @ ${m.time}</span>${(m.location==="Office")!==(du.location==="Office")&&du.location!=="Holiday"?` <span class="badge absent">duty was: ${du.location}</span>`:""}`
       :sun?`<span class="badge holiday">Holiday</span>`:`<span class="badge absent">Not present / absent</span>`}</td></tr>`;
@@ -323,8 +323,9 @@ function renderCheck(){
   <button class="btn" onclick="leaveIn('CL')">🏖️ Casual</button>
   <button class="btn" onclick="cancelPL()">❌ Cancel Planned Leave</button></div>
   <p class="msg" id="ck-msg"></p></div>
-  <h3>Today's entries (all phones)</h3><table><tr><th class="c">#</th><th>Name</th><th class="c">Time</th><th class="c">Method</th><th class="c">Location (auto)</th><th class="c">Face</th>${ADMIN?'<th class="c">✖</th>':""}</tr>`;
-  S.employees.forEach(e=>{const m=day[e.id];if(m)h+=`<tr><td class="c">${e.id}</td><td>${e.name}</td><td class="c">${m.time}</td><td class="c">${m.method}</td><td class="c"><span class="badge ${m.location==="Office"?"office":m.location==="Leave"?"leave":"outside"}">${recLabel(m,e)}</span></td><td class="c">${m.photo||m.thumb?`<img class="face" src="${m.photo||m.thumb}">`:"—"}</td>${ADMIN?`<td class="c"><button class="btn danger" onclick="delRec(${e.id})">✖</button></td>`:""}</tr>`;});
+  <h3>Today's entries (all phones)</h3><table><tr><th class="c">#</th><th>Name</th><th class="c">Time</th><th class="c">Method</th><th class="c">Location (auto)</th><th class="c">Face</th></tr>`;
+  S.employees.forEach(e=>{const m=day[e.id];if(m)h+=`<tr><td class="c">${e.id}</td><td>${e.name}</td><td class="c">${m.time}</td><td class="c">${m.method}</td><td class="c"><span class="badge ${m.location==="Office"?"office":m.location==="Leave"?"leave":"outside"}">${recLabel(m,e)}</span></td><td class="c">${m.photo||m.thumb?`<img class="face" src="${m.photo||m.thumb}">`:"—"}</td></tr>`;});
+  if(ADMIN){h+=`<div class="row"><select id="del-emp">${S.employees.map(e=>`<option value="${e.id}">${e.id}. ${e.name}</option>`).join("")}</select><button class="btn danger" onclick="delSel()">🗑 Remove today's entry (admin)</button></div>`;}
   let ups=[];
   for(const[day,recs]of Object.entries(S.attendance)){if(day>=t)for(const[id,r]of Object.entries(recs)){if(r.location==="Leave"&&r.lv==="PL")ups.push({day,id:+id});}}
   ups.sort((a,b)=>a.day<b.day?-1:1);
@@ -368,6 +369,7 @@ function put(emp,rec,date){
   publish({type:"att",date:t,id:emp.id,name:emp.name,time:rec.time,method:rec.method,location:rec.location,branch:rec.branch,place:rec.place,lv:rec.lv,thumb:rec.thumb});
   archive();
 }
+function delSel(){const s=$("del-emp");if(s)delRec(+s.value);}
 function delRec(id){
   if(!ADMIN)return;
   const t=todayStr();
