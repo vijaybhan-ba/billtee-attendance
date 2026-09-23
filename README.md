@@ -118,3 +118,16 @@ Leave is a one-tap choice: 🤒 Sick (SL) · 📅 Planned (PL) · 🏖️ Casual
 The chosen one-word code appears in records, the live feed, reports and CSV
 automatically. Taking leave also locks that person's attendance for the day
 (1 person = 1 entry/day).
+
+
+## v7 shared monthly register + cancel planned leave
+
+* Fixed live feed (ntfy `poll=1`) — phones now actually see each other instantly.
+* **Shared register** `data/attendance.json` on the site: every phone loads the
+  full month, so Reports show 30/31 days for everybody (present/leave/absent).
+* The admin phone publishes the register automatically when a GitHub data token
+  is pasted in Settings (fine-grained PAT, repo billtee-attendance,
+  Contents read/write). Without it: Reports → 🔄 Sync + 📥 Import employee backup.
+* **❌ Cancel Planned Leave**: employee with his code (or admin ✖) cancels a PL;
+  the cancel propagates to every phone and the person can check in again.
+* One person = one entry/day enforced against local + live feed + register.
