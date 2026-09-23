@@ -76,7 +76,7 @@ function lsDel(){MEM=null;try{localStorage.removeItem(KEY);}catch(e){}}
 function freshState(){
   return {
     config:{company:"Billtee",year:"2026-27",github:"https://github.com/"+REPO,cycle:"2026-04-01",
-      offices:{Andheri:{lat:19.1197,lon:72.8464},Ambadi:{lat:19.7577,lon:72.7454}},radius:500,
+      offices:{Andheri:{lat:19.1117,lon:72.8546},Ambadi:{lat:19.7577,lon:72.7454}},radius:300,cfgVer:2,
       adminPin:"7777",sync:true,topic:"billtee-attendance-vj-2026",token:""},
     employees:NAMES.map((n,i)=>({id:i+1,name:n,grp:i<4?"A":"B",fp:CODES[i+1],
       loc:[,"Ambadi","Andheri","Andheri","Ambadi","Ambadi","Andheri","Ambadi","Andheri"][i+1],face:null})),
@@ -85,18 +85,19 @@ function freshState(){
 }
 function load(){
   try{const s=JSON.parse(lsGet());if(s&&s.employees)return s;}catch(e){}
-  for(const old of ["billtee_attendance_v6","billtee_attendance_v5"]){
+  for(const old of ["billtee_attendance_v7","billtee_attendance_v6","billtee_attendance_v5"]){
     try{
       const o=JSON.parse(localStorage.getItem(old));
       if(o&&o.employees){const s=freshState();s.attendance=o.attendance||{};
         s.employees=o.employees.map((e,i)=>Object.assign({},s.employees[i],e));
-        if(o.config)Object.assign(s.config,{adminPin:o.config.adminPin,topic:o.config.topic,offices:o.config.offices,radius:o.config.radius});
+        if(o.config)Object.assign(s.config,{adminPin:o.config.adminPin,topic:o.config.topic});
         return s;}
     }catch(e){}
   }
   return freshState();
 }
 let S=load();
+if(!S.config.cfgVer||S.config.cfgVer<2){S.config.offices.Andheri={lat:19.1117,lon:72.8546};S.config.radius=300;S.config.cfgVer=2;}
 function save(){lsSet(JSON.stringify(S));}
 let ADMIN=false;
 try{ADMIN=sessionStorage.getItem("billtee_admin")==="1";}catch(e){}
@@ -235,7 +236,7 @@ async function syncNow(){
   await archive();
 }
 async function loadFeed(){
-  const feed=await fetchFeed();
+  const feed=await withTimeout(fetchFeed(),6000);
   const box=$("feed");if(!box)return;
   const t=todayStr();
   let rows=[];
@@ -316,14 +317,21 @@ function renderCheck(){
   <div class="row"><button class="btn" onclick="camStart()">🎥 Start Camera</button>
   <button class="btn primary" onclick="faceIn()">📸 Face Capture + Live Location</button></div>
   <div class="row"><span style="font-weight:600">🏖️ Leave — choose type:</span>
+  <input id="ck-date" type="date" value="${t}" style="width:160px" title="Planned leave date">
   <button class="btn" onclick="leaveIn('SL')">🤒 Sick</button>
-  <button class="btn" onclick="leaveIn('PL')">📅 Planned</button>
+  <button class="btn" onclick="leaveIn('PL',true)">📅 Planned</button>
   <button class="btn" onclick="leaveIn('CL')">🏖️ Casual</button>
   <button class="btn" onclick="cancelPL()">❌ Cancel Planned Leave</button></div>
   <p class="msg" id="ck-msg"></p></div>
   <h3>Today's entries (all phones)</h3><table><tr><th class="c">#</th><th>Name</th><th class="c">Time</th><th class="c">Method</th><th class="c">Location (auto)</th><th class="c">Face</th>${ADMIN?'<th class="c">✖</th>':""}</tr>`;
   S.employees.forEach(e=>{const m=day[e.id];if(m)h+=`<tr><td class="c">${e.id}</td><td>${e.name}</td><td class="c">${m.time}</td><td class="c">${m.method}</td><td class="c"><span class="badge ${m.location==="Office"?"office":m.location==="Leave"?"leave":"outside"}">${recLabel(m,e)}</span></td><td class="c">${m.photo||m.thumb?`<img class="face" src="${m.photo||m.thumb}">`:"—"}</td>${ADMIN?`<td class="c"><button class="btn danger" onclick="delRec(${e.id})">✖</button></td>`:""}</tr>`;});
-  h+=`</table><h3>🌐 Live team today (all phones)</h3><div id="feed"><p class="sub">Loading…</p></div>`;
+  let ups=[];
+  for(const[day,recs]of Object.entries(S.attendance)){if(day>=t)for(const[id,r]of Object.entries(recs)){if(r.location==="Leave"&&r.lv==="PL")ups.push({day,id:+id});}}
+  ups.sort((a,b)=>a.day<b.day?-1:1);
+  if(ups.length){h+=`<h3>📅 Planned leaves (today & future)</h3><table><tr><th>Date</th><th class="c">#</th><th>Name</th><th class="c">Action</th></tr>`;
+    ups.forEach(u=>{const e=S.employees.find(x=>x.id===u.id);h+=`<tr><td>${u.day}</td><td class="c">${u.id}</td><td>${e?e.name:"?"}</td><td class="c"><button class="btn" onclick="setDateCancel('${u.day}',${u.id})">❌ Cancel (with ${e?e.name:""}'s code)</button></td></tr>`;});
+    h+="</table>";}
+  h+=`<h3>🌐 Live team today (all phones)</h3><div id="feed"><p class="sub">Loading…</p></div>`;
   $("t-check").innerHTML=h;
   $("ck-emp").onchange=showDuty;showDuty();
   loadFeed();
@@ -351,8 +359,8 @@ async function autoPlace(emp){
   const w=($("ck-loc")?$("ck-loc").value:"outside")==="office";
   return{location:w?"Office":"Outside",branch:emp.loc,place:w?emp.loc+" office":null,auto:false};
 }
-function put(emp,rec){
-  const t=todayStr();
+function put(emp,rec,date){
+  const t=date||todayStr();
   (S.attendance[t]||(S.attendance[t]={}))[emp.id]=rec;
   if(rec.photo)emp.face=rec.photo;
   save();
@@ -403,32 +411,37 @@ async function faceIn(){
     thumb=tc.toDataURL("image/jpeg",.4);}catch(e){}
   checkIn("face",img,thumb);
 }
-async function leaveIn(lv){
+async function leaveIn(lv,useDate){
   const emp=curEmp();if(!checkCode(emp))return;
-  const t=todayStr();
+  const t=useDate&&$("ck-date")&&$("ck-date").value?$("ck-date").value:todayStr();
   const dup=await dupBlock(emp,t);
   if(dup){const m=$("ck-msg");m.textContent=dup;m.className="msg err";return;}
   const names={SL:"Sick leave",PL:"Planned leave",CL:"Casual leave"};
-  put(emp,{time:new Date().toTimeString().slice(0,8),method:"leave",location:"Leave",lv:lv||"LV",branch:emp.loc,place:names[lv]||"leave",photo:null,thumb:null,auto:false});
+  put(emp,{time:new Date().toTimeString().slice(0,8),method:"leave",location:"Leave",lv:lv||"LV",branch:emp.loc,place:names[lv]||"leave",photo:null,thumb:null,auto:false},t);
   renderCheck();
-  const m=$("ck-msg");m.textContent=`🏖️ ${emp.name} — ${names[lv]||"leave"} recorded. Name now locked for today.`;m.className="msg ok";
+  const m=$("ck-msg");m.textContent=`🏖️ ${emp.name} — ${names[lv]||"leave"} recorded for ${t}.`+(t===todayStr()?" Name now locked for today.":"");m.className="msg ok";
 }
 async function cancelPL(){
   const emp=curEmp();
   if(!checkCode(emp))return;
-  const t=todayStr();
-  const rec=(S.attendance[t]||{})[emp.id];
-  if(!rec||rec.location!=="Leave"||rec.lv!=="PL"){
-    const m=$("ck-msg");m.textContent=`ℹ️ ${emp.name} has no planned leave today — nothing to cancel.`;m.className="msg err";return;}
-  delete S.attendance[t][emp.id];
-  delete (DB.days[t]||{})[emp.id];
+  const t=($("ck-date")&&$("ck-date").value)||todayStr();
+  const isPL=r=>r&&r.location==="Leave"&&r.lv==="PL";
+  let found=isPL((S.attendance[t]||{})[emp.id])||isPL((DB.days[t]||{})[emp.id]);
+  if(!found){
+    const feed=await withTimeout(fetchFeed(),2500);
+    if(feed&&!feed.del[t+"_"+emp.id])found=isPL(Object.values(feed.att).find(m=>m.date===t&&m.id===emp.id));
+  }
+  if(!found){const m=$("ck-msg");m.textContent=`ℹ️ ${emp.name} has no planned leave on ${t} — nothing to cancel.`;m.className="msg err";return;}
+  if(S.attendance[t])delete S.attendance[t][emp.id];
+  if(DB.days[t])delete DB.days[t][emp.id];
   (DB.dels||(DB.dels={}))[t+"_"+emp.id]=1;
   save();
   publish({type:"del",date:t,id:emp.id});
   archive();
   renderCheck();
-  const m=$("ck-msg");m.textContent=`🔄 ${emp.name}'s planned leave is CANCELLED for everyone. ${emp.name} can now check in normally.`;m.className="msg ok";
+  const m=$("ck-msg");m.textContent=`🔄 ${emp.name}'s planned leave on ${t} is CANCELLED for everyone. ${emp.name} can now check in.`;m.className="msg ok";
 }
+function setDateCancel(day,id){const e=$("ck-emp");if(e)e.value=String(id);const d=$("ck-date");if(d)d.value=day;cancelPL();}
 function camStart(){
   if(!navigator.mediaDevices){const m=$("ck-msg");m.textContent="No camera here — download this file and open in your browser for camera+GPS.";m.className="msg err";return;}
   navigator.mediaDevices.getUserMedia({video:{facingMode:"user"}}).then(s=>{stream=s;$("cam").srcObject=s;}).catch(()=>{const m=$("ck-msg");m.textContent="Camera blocked.";m.className="msg err";});
@@ -445,7 +458,17 @@ function renderEmps(){
     <td><input id="code-${e.id}" value="${e.fp}" type="password" style="width:90px" onchange="updEmp(${e.id},{fp:this.value})"> <button class="btn" onclick="peek(${e.id})">👁</button></td>
     <td class="c">${e.face?"✅":"—"} <button class="btn" onclick="enrollPrompt(${e.id})">Enroll</button></td></tr>`;
   });
-  $("t-emps").innerHTML=h+"</table>";
+  h+=`</table><div class="row"><button class="btn primary" onclick="addEmp()">➕ Add employee (auto code)</button></div>`;
+  $("t-emps").innerHTML=h;
+}
+function addEmp(){
+  if(!ADMIN)return;
+  const n=prompt("New employee name:");if(!n||!n.trim())return;
+  const id=Math.max.apply(null,S.employees.map(e=>e.id))+1;
+  let fp;do{fp=String(Math.floor(1000+Math.random()*9000));}while(S.employees.some(e=>e.fp===fp));
+  S.employees.push({id,name:n.trim(),grp:"B",fp,loc:"Ambadi",face:null});
+  save();renderEmps();
+  alert("Added "+n.trim()+" — #"+id+" with secret code "+fp+". Tell them privately.");
 }
 function peek(id){const i=$("code-"+id);if(i)i.type=i.type==="password"?"text":"password";}
 function updEmp(id,patch){if(!ADMIN)return;const e=S.employees.find(x=>x.id===id);Object.assign(e,patch);save();renderEmps();}
@@ -575,8 +598,19 @@ function renderSet(){
   <p class="sub">Create once: GitHub → Settings → Developer settings → Fine-grained tokens → only repo <b>billtee-attendance</b> → permission <b>Contents: Read and write</b>. Stays only on this phone.</p>
   <div class="row"><button class="btn primary" onclick="saveSet()">Save settings</button>
   <button class="btn" onclick="importBackup()">📥 Import employee backup</button>
+  <button class="btn" onclick="closeFresh()">🧹 Close past & start fresh</button>
   <button class="btn" onclick="if(confirm('Reset ALL data on this phone?')){lsDel();location.reload();}">Reset data</button></div>
   <p class="msg" id="st-msg"></p></div>`;
+}
+function closeFresh(){
+  if(!ADMIN)return;
+  if(!confirm("First download a backup, then clear ALL attendance and start fresh from today?"))return;
+  backup();
+  S.attendance={};save();
+  DB={v:7,days:{},dels:{}};
+  if(S.config.token)pushDB();
+  alert("Past closed. Backup downloaded. Starting fresh from today.");
+  render(curTab());
 }
 function saveSet(){
   if(!ADMIN)return;

@@ -131,3 +131,17 @@ automatically. Taking leave also locks that person's attendance for the day
 * **❌ Cancel Planned Leave**: employee with his code (or admin ✖) cancels a PL;
   the cancel propagates to every phone and the person can check in again.
 * One person = one entry/day enforced against local + live feed + register.
+
+
+## v8 fixes (23 Sep 2026)
+
+* Andheri office GPS corrected to the real office (plus code 4V63+MRJ =
+  19.1117, 72.8546), radius 300 m — being inside now reads "Office – Andheri".
+* Planned leave has a **calendar**: pick any future date; shows in reports and in
+  a "Planned leaves (today & future)" list with a Cancel button.
+* Cancel planned leave works across phones (finds the leave in the live feed /
+  register and cancels it for everyone).
+* Live list can never hang ("Loading…" fixed with a 6 s timeout).
+* Admin: ➕ Add employee (auto 4-digit code), 🧹 Close past & start fresh
+  (downloads backup first). Present/absent changes remain admin-only; employees
+  can only take/cancel their own planned leave with their code.
