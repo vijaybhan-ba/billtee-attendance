@@ -339,11 +339,12 @@ function renderCheck(){
   <div class="row"><button class="btn" onclick="camStart()">🎥 Start Camera</button>
   <button class="btn primary" onclick="faceIn()">📸 Face Capture + Live Location</button></div>
   <div class="row"><span style="font-weight:600">🏖️ Leave — choose type:</span>
-  <input id="ck-date" type="date" value="${t}" style="width:160px" title="Planned leave date">
+  <span style="font-weight:600">📅 Date:</span><input id="ck-date" type="date" value="${t}" style="width:160px" title="Custom date for Planned leave & Cancel">
   <button class="btn" onclick="leaveIn('SL')">🤒 Sick</button>
   <button class="btn" onclick="leaveIn('PL',true)">📅 Planned</button>
   <button class="btn" onclick="leaveIn('CL')">🏖️ Casual</button>
-  <button class="btn" onclick="cancelPL()">❌ Cancel Planned Leave</button></div>
+  <button class="btn" onclick="cancelPL()">❌ Cancel Planned (chosen date)</button></div>
+  <p class="sub">Pick the 📅 date first: 📅 Planned books leave on that date · ❌ cancels that date · the list below shows every planned leave with its own cancel button.</p>
   <p class="msg" id="ck-msg"></p></div>
   <div id="ck-lists">${checkListsHTML()}</div>
   <h3>🌐 Live team today (all phones)</h3><div id="feed"><p class="sub">Loading…</p></div>`;
