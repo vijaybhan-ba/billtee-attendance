@@ -1,0 +1,980 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jai Bhavani Vegetables &amp; dairy</title>
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,sans-serif;background:#f5f7f2;color:#222;line-height:1.5}
+header{background:#218838;color:white;text-align:center;padding:24px 12px}
+header h1{font-size:26px}
+header p{margin-top:6px}
+.header-actions{margin-top:14px}
+.share-button,.shopkeeper-panel summary{display:inline-block;background:white;color:#176b2c;border:0;border-radius:7px;padding:9px 14px;font:inherit;font-weight:bold;cursor:pointer}
+.share-status{font-size:13px;margin:9px auto 0;max-width:620px}
+.welcome{text-align:center;padding:28px 12px}
+.section,.checkout{max-width:1100px;margin:auto;padding:18px}
+.section h2,.checkout h2{color:#218838;margin-bottom:16px;border-bottom:2px solid #218838;padding-bottom:9px}
+.product-search{display:block;max-width:700px;margin:0 auto}
+.product-search input{display:block;width:100%;margin-top:5px;padding:10px;border:1px solid #bbb;border-radius:6px}
+.search-status{min-height:20px;margin:8px auto 0;max-width:700px;color:#555;font-size:13px}
+.category-tabs{display:flex;flex-wrap:wrap;gap:8px;max-width:700px;margin:0 auto 16px}
+.category-tab{border:1px solid #218838;border-radius:20px;background:white;color:#176b2c;padding:8px 14px;font:inherit;cursor:pointer}
+.category-tab[aria-pressed="true"]{background:#218838;color:white}
+.shopkeeper-panel{max-width:1100px;margin:0 auto 12px;padding:0 18px}
+.shopkeeper-panel summary{background:#e5f2e7;transition:background .2s ease,box-shadow .2s ease}
+.shopkeeper-panel[open] summary{background:#d6f0dc;box-shadow:0 0 0 2px #218838}
+.shopkeeper-content{background:white;border-radius:12px;padding:18px;margin-top:12px;box-shadow:0 2px 9px #00000012}
+.shopkeeper-content h2{color:#218838;margin-bottom:8px}
+.shopkeeper-content form{margin-top:14px}
+.products{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:15px}
+.product,.panel{background:white;border-radius:12px;overflow:hidden;box-shadow:0 2px 9px #00000012}
+.product{text-align:center;padding-bottom:14px}
+.product img{display:block;width:100%;height:135px;object-fit:cover;background:#eee}
+.product img[hidden]{display:none}
+.product h3{font-size:15px;margin:12px 5px 7px}
+.price{color:#218838;font-weight:bold;margin:8px}
+.unit,.note{font-size:12px;color:#666}
+.product input{width:82px;padding:8px;border:1px solid #bbb;border-radius:5px;margin-top:10px}
+.quantity-label{display:block;font-size:12px;color:#555;margin-top:9px}
+.quantity-label input{margin-top:4px}
+.note{font-size:11px;color:#888;margin:7px 5px 0}
+.checkout{padding-bottom:32px}
+.panel{padding:18px;margin-bottom:16px}
+.cart-empty{color:#666}
+.cart-lines{list-style:none}
+.cart-lines li,.summary-row{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid #eee}
+.cart-total{font-size:18px;font-weight:bold;color:#176b2c;margin-top:10px}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+label{display:block;font-weight:bold;font-size:14px}
+input,textarea,select{font:inherit}
+.form-grid input,.form-grid textarea,.form-grid select{display:block;width:100%;margin-top:5px;padding:10px;border:1px solid #bbb;border-radius:6px}
+.form-grid textarea{min-height:84px;resize:vertical}
+.field-wide{grid-column:1/-1}
+.demo-payment-preview{display:flex;align-items:center;gap:16px;margin-top:16px;padding:16px;border:1px solid #e6c46a;border-radius:10px;background:#fff9e8}
+.demo-payment-qr{display:block;flex:0 0 160px;width:160px;height:160px;border:8px solid white;box-shadow:0 1px 5px #0002}
+.demo-payment-copy strong{display:block;color:#805b00;margin-bottom:5px}
+.demo-payment-copy p{font-size:13px;color:#604c20}
+.hint,.checkout-status{font-size:13px;color:#555;margin-top:10px}
+.primary-button{display:inline-block;background:#218838;color:white;border:0;border-radius:7px;padding:12px 18px;font:inherit;font-weight:bold;cursor:pointer;margin-top:16px}
+.primary-button:hover{background:#176b2c}
+.primary-button:disabled{background:#888;cursor:not-allowed}
+.checkout-status{min-height:20px}
+footer{background:#218838;color:white;text-align:center;padding:20px;margin-top:20px}
+@media(max-width:480px){.section,.checkout{padding:14px}.products{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.product img{height:120px}.panel{padding:14px}.demo-payment-preview{align-items:flex-start;flex-direction:column}.demo-payment-qr{align-self:center}}
+</style>
+</head>
+
+<body>
+
+<header>
+<h1>Jai Bhavani Vegetables &amp; dairy</h1>
+<p>Fresh Products at Your Doorstep</p>
+<p>Global City, Virar West</p>
+</header>
+
+<section class="welcome">
+<h2>Welcome to Jai Bhavani</h2>
+<p>Order vegetables, dairy products and water for home delivery.</p>
+<div class="header-actions">
+  <button class="share-button" id="shareShop" type="button">Share shop</button>
+  <p class="share-status" id="shareStatus" role="status"></p>
+</div>
+</section>
+
+<details class="shopkeeper-panel">
+<summary>Shopkeeper: product prices</summary>
+<div class="shopkeeper-content" id="priceLock">
+  <h2>Shopkeeper PIN required</h2>
+  <p class="hint">Enter your PIN to edit prices. This prototype lock only protects the page interface on this device.</p>
+  <form id="priceUnlockForm">
+    <label>Shopkeeper PIN
+      <input id="shopkeeperPin" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="current-password" aria-describedby="unlockStatus" required>
+    </label>
+    <button class="primary-button" type="submit">Unlock price management</button>
+    <p class="checkout-status" id="unlockStatus" role="status" aria-live="polite"></p>
+  </form>
+</div>
+<div id="priceManagement" hidden>
+<div class="shopkeeper-content">
+  <h2>Update product price</h2>
+  <p class="hint">Vegetables default to kg; milk, lassi and other drinks default to litre; other dairy defaults to kg; water is counted in jars. You can change the selling unit for each product below. Enter the price for one of the selected units. These prototype prices are saved only in this browser on this device.</p>
+  <form id="priceForm">
+    <div class="form-grid">
+      <label>Product
+        <select id="priceProduct" required></select>
+      </label>
+      <label>Price (₹)
+        <input id="priceAmount" type="number" min="0.01" step="0.01" required>
+      </label>
+      <label>Unit
+        <input id="priceUnit" type="text" maxlength="40" placeholder="e.g. per kg, per litre, per jar" required>
+      </label>
+    </div>
+    <button class="primary-button" type="submit">Save price on this device</button>
+    <p class="checkout-status" id="priceStatus" role="status" aria-live="polite"></p>
+  </form>
+</div>
+</div>
+</details>
+
+<section class="section">
+<h2>Search all products</h2>
+<div class="category-tabs" role="group" aria-label="Filter products by category">
+  <button class="category-tab" type="button" data-category-filter="all" aria-pressed="true">All</button>
+  <button class="category-tab" type="button" data-category-filter="vegetables" aria-pressed="false">Vegetables</button>
+  <button class="category-tab" type="button" data-category-filter="dairy" aria-pressed="false">Dairy</button>
+  <button class="category-tab" type="button" data-category-filter="water" aria-pressed="false">Water</button>
+</div>
+<label class="product-search">Product name
+  <input type="search" id="productSearch" placeholder="Search vegetables, dairy, water, or soft drinks..." autocomplete="off">
+</label>
+<p class="search-status" id="searchStatus" role="status" aria-live="polite"></p>
+</section>
+
+<section class="section">
+<h2>🥦 Vegetables</h2>
+<div class="products" id="vegetables"></div>
+</section>
+
+<section class="section">
+<h2>🥛 Dairy Products</h2>
+<div class="products" id="dairy"></div>
+</section>
+
+<section class="section">
+<h2>💧 Water &amp; Soft Drinks</h2>
+<div class="products" id="water"></div>
+</section>
+
+<section class="checkout" id="checkout">
+<h2>Your Cart &amp; Checkout</h2>
+<div class="panel" aria-live="polite">
+  <ul class="cart-lines" id="cartLines"></ul>
+  <p class="cart-empty" id="cartEmpty">Your cart is empty. Choose quantities above to get started.</p>
+  <div class="summary-row"><span>Subtotal for priced items</span><strong id="subtotal">₹0</strong></div>
+  <div class="summary-row"><span>Delivery</span><strong id="deliveryAmount">Calculated after address distance is selected</strong></div>
+  <p class="cart-total" id="cartTotal">Estimated total: ₹0</p>
+  <p class="hint" id="priceNotice">Product prices must be confirmed by the shopkeeper before the order is final.</p>
+</div>
+<form class="panel" id="orderForm">
+  <div class="form-grid">
+    <label>Name
+      <input name="name" autocomplete="name" required maxlength="80">
+    </label>
+    <label>Mobile number
+      <input name="mobile" type="tel" inputmode="numeric" autocomplete="tel" pattern="[0-9]{10,15}" title="Enter 10 to 15 digits without spaces." required>
+    </label>
+    <label class="field-wide">Delivery address
+      <textarea name="address" autocomplete="street-address" required maxlength="400"></textarea>
+    </label>
+    <label>Distance from shop
+      <select name="distance" required>
+        <option value="">Select distance</option>
+        <option value="within">Within 3 km (free delivery)</option>
+        <option value="beyond">Beyond 3 km (charge to be confirmed)</option>
+      </select>
+    </label>
+    <label>Payment preference
+      <select name="payment" required>
+        <option value="Cash on Delivery">Cash on Delivery</option>
+        <option value="UPI">UPI (demo preview only)</option>
+      </select>
+    </label>
+  </div>
+  <div class="demo-payment-preview" id="demoPaymentPreview" hidden>
+    <svg class="demo-payment-qr" id="demoPaymentQr" viewBox="0 0 290 290" role="img" aria-label="Decorative demo QR pattern. It is not a real or scannable payment code." xmlns="http://www.w3.org/2000/svg"></svg>
+    <div class="demo-payment-copy">
+      <strong>DEMO ONLY — NOT A PAYMENT QR</strong>
+      <p>This sample is not scannable and cannot accept or verify payment. Please do not send money. The shopkeeper must provide a real UPI QR before UPI payments can be used.</p>
+    </div>
+  </div>
+  <p class="hint">No night delivery fee is added. For deliveries beyond 3 km, the shopkeeper will confirm the charge before accepting your order. This website does not process or verify UPI payments.</p>
+  <button class="primary-button" id="submitOrder" type="submit" disabled>Continue to WhatsApp</button>
+  <p class="checkout-status" id="checkoutStatus" role="status"></p>
+</form>
+</section>
+
+<footer>
+<p>Jai Bhavani Vegetables &amp; dairy</p>
+<p>Global City, Virar West, Maharashtra</p>
+<p>Contact: <a href="tel:+918766474170" style="color:white">8766474170</a></p>
+</footer>
+
+<script>
+const vegetables = [
+["Potato","potato"],["Onion","onion"],["Tomato","tomato"],
+["Green Chilli","green chilli"],["Bitter Gourd","bitter gourd"],
+["Cucumber","cucumber"],["Beetroot","beetroot"],
+["Carrot","carrot"],["Radish","radish"],["Brinjal","eggplant"],
+["Capsicum","bell pepper"],["Cauliflower","cauliflower"],
+["Cabbage","cabbage"],["Broccoli","broccoli"],["Green Peas","green peas"],
+["Bottle Gourd","bottle gourd"],["Ridge Gourd","ridge gourd"],
+["Pumpkin","pumpkin"],["French Beans","green beans"],
+["Spinach","spinach leaves"],["Fenugreek","fenugreek leaves"],
+["Coriander","coriander leaves"],["Mint","mint leaves"],
+["Curry Leaves","curry leaves"],["Ginger","ginger root"],
+["Garlic","garlic"],["Lemon","lemon"],["Amla","indian gooseberry"],
+["Coconut","coconut"],
+["Sweet Corn","sweet corn"],["Spring Onion","spring onion"],
+["Drumstick","drumstick vegetable"],["Mushroom","mushroom"],
+["Sweet Potato","sweet potato"],["Arbi","taro root"],
+["Lady Finger","okra"],
+["Raw Banana","raw banana"],["Lettuce","lettuce"],
+["Mustard Leaves","mustard greens"],["Pointed Gourd","pointed gourd"],
+["Ivy Gourd","ivy gourd"],["Snake Gourd","snake gourd"],
+["Yam","elephant foot yam"]
+];
+
+const vegetableHindiNames = {
+  "Potato":"आलू",
+  "Onion":"प्याज़",
+  "Tomato":"टमाटर",
+  "Green Chilli":"हरी मिर्च",
+  "Bitter Gourd":"करेला",
+  "Cucumber":"खीरा",
+  "Beetroot":"चुकंदर",
+  "Carrot":"गाजर",
+  "Radish":"मूली",
+  "Brinjal":"बैंगन",
+  "Capsicum":"शिमला मिर्च",
+  "Cauliflower":"फूलगोभी",
+  "Cabbage":"पत्तागोभी",
+  "Broccoli":"ब्रोकोली",
+  "Green Peas":"हरी मटर",
+  "Bottle Gourd":"लौकी",
+  "Ridge Gourd":"तोरई",
+  "Pumpkin":"कद्दू",
+  "French Beans":"फ्रेंच बीन्स",
+  "Spinach":"पालक",
+  "Fenugreek":"मेथी",
+  "Coriander":"धनिया",
+  "Mint":"पुदीना",
+  "Curry Leaves":"करी पत्ता",
+  "Ginger":"अदरक",
+  "Garlic":"लहसुन",
+  "Lemon":"नींबू",
+  "Amla":"आंवला",
+  "Coconut":"नारियल",
+  "Sweet Corn":"मक्का",
+  "Spring Onion":"हरा प्याज़",
+  "Drumstick":"सहजन",
+  "Mushroom":"मशरूम",
+  "Sweet Potato":"शकरकंद",
+  "Arbi":"अरबी",
+  "Lady Finger":"भिंडी",
+  "Raw Banana":"कच्चा केला",
+  "Lettuce":"सलाद पत्ता",
+  "Mustard Leaves":"सरसों का साग",
+  "Pointed Gourd":"परवल",
+  "Ivy Gourd":"कुंदरू",
+  "Snake Gourd":"चिचिंडा",
+  "Yam":"सूरन"
+};
+
+const dairy = [
+["Cow Milk","milk bottle"],["Buffalo Milk","milk bottle"],
+["Toned Milk","milk packet"],["Full Cream Milk","milk packet"],
+["Paneer","paneer cubes"],["Curd (Dahi)","curd bowl"],
+["Butter","butter"],["Ghee","ghee jar"],
+["Cheese Slices","cheese slices"],["Cheese Cubes","cheese cubes"],
+["Buttermilk (Chaas)","buttermilk glass"],["Lassi","lassi glass"],
+["Flavoured Milk","flavoured milk bottle"],["Yogurt","yogurt bowl"],
+["Fresh Cream","fresh cream"],["Milk Powder","milk powder"],
+["Condensed Milk","condensed milk tin"],["Mawa (Khoya)","khoya"],
+["Shrikhand","shrikhand bowl"],["Rabri","rabri bowl"],
+["Greek Yogurt","greek yogurt"]
+];
+
+const priceStorageKey="jaiBhavaniProductPrices";
+const waterProducts=[
+  ["Bisleri 20 Litre Water Jar","water jar"],
+  ["Apple Fizz","apple fizz"],
+  ["Coca-Cola","coca-cola"],
+  ["Pepsi","pepsi"],
+  ["Thums Up","thums up"]
+];
+const dairyProducts=dairy.filter(item=>photoUrl(item[0],"dairy"));
+const productsByCategory={
+  vegetables,
+  dairy:dairyProducts,
+  water:waterProducts
+};
+const knownProductKeys=new Set(
+  Object.entries(productsByCategory).flatMap(([category,items])=>
+    items.map(item=>category+"|"+item[0]))
+);
+let productPrices={
+  "water|Bisleri 20 Litre Water Jar":{price:40,unit:"per 20 litre jar"}
+};
+
+function productKey(productName,category){
+return category+"|"+productName;
+}
+
+function defaultProductUnit(productName,category){
+if(category==="vegetables"){
+  return "kg";
+}
+if(category==="water"){
+  return productName==="Bisleri 20 Litre Water Jar" ? "jar" : "bottle";
+}
+if(/milk|buttermilk|chaas|lassi/i.test(productName)){
+  return "litre";
+}
+return "kg";
+}
+
+function minimumProductPrice(productName,category){
+if(category==="water" && productName==="Bisleri 20 Litre Water Jar"){
+  return 40;
+}
+if(category==="dairy" && /milk/i.test(productName)){
+  return 30;
+}
+return 0.01;
+}
+
+function quantityUnitFromPriceUnit(priceUnit,productName,category){
+const normalized=priceUnit.toLowerCase();
+if(/\bjar\b/.test(normalized)){
+  return "jar";
+}
+if(/\b(packet|pack|pouch)\b/.test(normalized)){
+  return "packet";
+}
+if(/\b(bottle|bottles)\b/.test(normalized)){
+  return "bottle";
+}
+if(/\b(piece|pieces|pcs|pc)\b/.test(normalized)){
+  return "piece";
+}
+if(/\b(kg|kilogram|kilograms)\b/.test(normalized)){
+  return "kg";
+}
+if(/\b(g|gram|grams)\b/.test(normalized)){
+  return "g";
+}
+if(/\b(ml|millilitre|milliliter|millilitres|milliliters)\b/.test(normalized)){
+  return "ml";
+}
+if(/\b(l|litre|liter|litres|liters)\b/.test(normalized)){
+  return "litre";
+}
+return defaultProductUnit(productName,category);
+}
+
+function formatQuantity(quantity,unit){
+const displayUnit=unit==="jar" && quantity!==1 ? "jars" :
+  unit==="bottle" && quantity!==1 ? "bottles" :
+  unit==="packet" && quantity!==1 ? "packets" :
+  unit==="piece" && quantity!==1 ? "pieces" : unit;
+return quantity+" "+displayUnit;
+}
+
+function loadSavedPrices(){
+try{
+  const saved=localStorage.getItem(priceStorageKey);
+  if(!saved){
+    return;
+  }
+  const parsed=JSON.parse(saved);
+  if(!parsed || typeof parsed!=="object" || Array.isArray(parsed)){
+    throw new Error("Saved product prices have an invalid format.");
+  }
+  Object.entries(parsed).forEach(([key,value])=>{
+    if(knownProductKeys.has(key) && value && Number.isFinite(value.price) && value.price>0 &&
+      typeof value.unit==="string" && value.unit.trim()){
+      productPrices[key]={price:value.price,unit:value.unit.trim()};
+    }
+  });
+}catch(error){
+  document.getElementById("priceStatus").textContent=
+    "Could not load saved prices from this browser: "+error.message;
+}
+}
+
+loadSavedPrices();
+
+function photoUrl(productName, category) {
+const productPhotos = {
+  vegetables: {
+    "Potato":"Potato.jpg..jpg",
+    "Onion":"Onion.jpj..jpg",
+    "Tomato":"Tomato.jpg..jpg",
+    "Green Chilli":"chilli green.jpg..jpg",
+    "Bitter Gourd":"bitter gourd.jpg..jpg",
+    "Cucumber":"cucumber.jpg..jpg",
+    "Beetroot":"Beetroot.jpg..jpg",
+    "Carrot":"carrot.jpg..jpg",
+    "Radish":"Radish.jpg..jpg",
+    "Brinjal":"Brinjal.jpg..jpg",
+    "Capsicum":"capsicum.jpg..jpg",
+    "Cauliflower":"cauliflower.jpg..jpg",
+    "Cabbage":"cabbage.jpg..jpg",
+    "Broccoli":"broccoli.jpg..jpg",
+    "Green Peas":"Green Peas.jpg..jpg",
+    "Bottle Gourd":"bottle gourd.jpg",
+    "Ridge Gourd":"Ridge Gourd.jpg..jpg",
+    "Pumpkin":"Pumpkin.jpg..jpg",
+    "French Beans":"French Beans.jpg..jpg",
+    "Spinach":"Spinach.jpg..jpg",
+    "Fenugreek":"Fenugreek.jpg..jpg",
+    "Coriander":"corander.jpg..jpg",
+    "Mint":"Mint.jpg..jpg",
+    "Curry Leaves":"Curry Leaves.jpg..jpg",
+    "Ginger":"ginger.jpg..jpg",
+    "Garlic":"garlic.jpg..jpg",
+    "Lemon":"lemon.jpg..jpg",
+    "Amla":"Amla.jpg",
+    "Sweet Corn":"Sweet Corn.jpg",
+    "Spring Onion":"Spring Onion.jpg",
+    "Mushroom":"Mushroom.jpg",
+    "Sweet Potato":"sweet potato.jpg..jpg",
+    "Arbi":"Arbi.jpg",
+    "Coconut":"coconut.jpg..jpg",
+    "Lady Finger":"lady finger.jpg..jpg",
+    "Raw Banana":"Raw Banana.jpg",
+    "Lettuce":"Lettuce.jpg",
+    "Pointed Gourd":"Pointed Gourd.jpg",
+    "Snake Gourd":"Snake Gourd.jpg",
+    "Yam":"Yam.jpg"
+  },
+  dairy: {
+    "Cow Milk":"Cow Milkkk.jpg",
+    "Buffalo Milk":"Buffalo Milk.jpg",
+    "Paneer":"paneer.jpg..jpg",
+    "Curd (Dahi)":"curd.jpg..jpg",
+    "Butter":"Butter.jpg",
+    "Ghee":"Ghee.jpg..jpg",
+    "Cheese Slices":"Cheese Slices.jpg",
+    "Cheese Cubes":"Cheese Cubes.jpg",
+    "Lassi":"Lassi.jpg",
+    "Mawa (Khoya)":"Mawa (Khoya).jpg",
+    "Shrikhand":"Shrikhand.jpg",
+    "Rabri":"Rabri.jpg"
+  },
+  water: {
+    "Bisleri 20 Litre Water Jar":"water jar.jpg..jpg",
+    "Apple Fizz":"Apple Fizz.jpg",
+    "Coca-Cola":"cocacola.jpg",
+    "Pepsi":"pepsi.jpg",
+    "Thums Up":"Thumbsup.jpg"
+  }
+};
+
+const imageFile=productPhotos[category]?.[productName];
+if(!imageFile){
+  return null;
+}
+
+const folder=category=== "vegetables" ? "Vegitables" : category;
+return "Imagess/"+folder+"/"+encodeURI(imageFile);
+}
+
+function showProducts(items,containerId,category){
+const container=document.getElementById(containerId);
+
+items.forEach(item=>{
+const card=document.createElement("div");
+card.className="product";
+card.dataset.productName=item[0];
+card.dataset.category=category;
+
+const img=document.createElement("img");
+const imagePath=photoUrl(item[0],category);
+if(imagePath){
+  img.src=imagePath;
+  img.alt=item[0]+" real product photo";
+}else{
+  img.alt="";
+  img.hidden=true;
+}
+img.addEventListener("error",()=>{
+  img.alt="";
+  img.hidden=true;
+  if(category==="dairy"){
+    card.remove();
+  }
+});
+img.loading="lazy";
+
+const name=document.createElement("h3");
+const hindiName=category==="vegetables" ? vegetableHindiNames[item[0]] : "";
+name.textContent=hindiName
+  ? item[0]+" ("+hindiName+")"
+  : item[0];
+card.dataset.searchName=(item[0]+" "+hindiName).toLocaleLowerCase();
+
+const price=document.createElement("p");
+price.className="price";
+
+const unit=document.createElement("p");
+unit.className="unit";
+
+const savedPrice=productPrices[productKey(item[0],category)];
+card.dataset.price=savedPrice ? String(savedPrice.price) : "";
+card.dataset.unit=savedPrice ? savedPrice.unit : "";
+const quantityUnit=savedPrice
+  ? quantityUnitFromPriceUnit(savedPrice.unit,item[0],category)
+  : defaultProductUnit(item[0],category);
+card.dataset.quantityUnit=quantityUnit;
+price.textContent=savedPrice ? formatRupees(savedPrice.price) : "Price to be confirmed";
+unit.textContent=savedPrice ? savedPrice.unit : "Price per "+quantityUnit;
+
+const quantity=document.createElement("input");
+quantity.type="number";
+quantity.min="0";
+quantity.step=["jar","bottle","packet","piece"].includes(quantityUnit) ? "1" : "any";
+quantity.value="0";
+quantity.setAttribute("aria-label","Quantity of "+item[0]+" in "+quantityUnit);
+quantity.addEventListener("input",updateCart);
+const quantityLabel=document.createElement("label");
+quantityLabel.className="quantity-label";
+quantityLabel.textContent="Quantity ("+quantityUnit+")";
+quantityLabel.appendChild(quantity);
+
+const note=document.createElement("p");
+note.className="note";
+note.textContent=item[0]==="Bisleri 20 Litre Water Jar"
+  ? "Minimum order: 1 jar"
+  : category==="water"
+    ? "Soft drink · price set by shopkeeper"
+    : "Current price and availability confirmed by shopkeeper";
+
+card.append(img,name,price,unit,quantityLabel,note);
+container.appendChild(card);
+});
+}
+
+showProducts(vegetables,"vegetables","vegetables");
+showProducts(dairyProducts,"dairy","dairy");
+showProducts(waterProducts,"water","water");
+
+const productSearch=document.getElementById("productSearch");
+const searchStatus=document.getElementById("searchStatus");
+let activeCategory="all";
+
+function filterProducts(){
+const searchTerm=productSearch.value.trim().toLocaleLowerCase();
+let visibleCount=0;
+const visibleCategories=new Set();
+
+document.querySelectorAll(".products .product").forEach(card=>{
+ const categoryMatches=activeCategory==="all" || card.dataset.category===activeCategory;
+ const matches=categoryMatches && card.dataset.searchName.includes(searchTerm);
+ card.hidden=!matches;
+ const categorySection=card.closest(".section");
+ if(matches){
+   visibleCount++;
+   visibleCategories.add(categorySection);
+ }
+});
+
+document.querySelectorAll(".products").forEach(container=>{
+ const categorySection=container.closest(".section");
+ categorySection.hidden=activeCategory==="all"
+   ? Boolean(searchTerm) && !visibleCategories.has(categorySection)
+   : container.id!==activeCategory || (Boolean(searchTerm) && !visibleCategories.has(categorySection));
+});
+
+searchStatus.textContent=searchTerm && visibleCount===0
+ ? "No "+(activeCategory==="all" ? "products" : activeCategory==="dairy" ? "dairy products" : activeCategory==="water" ? "water products" : "vegetables")+" found. Try a different name."
+ : searchTerm
+   ? visibleCount+" product"+(visibleCount===1 ? "" : "s")+" found."
+   : "";
+}
+
+document.querySelectorAll("[data-category-filter]").forEach(button=>{
+button.addEventListener("click",()=>{
+  activeCategory=button.dataset.categoryFilter;
+  document.querySelectorAll("[data-category-filter]").forEach(tab=>{
+    tab.setAttribute("aria-pressed",String(tab===button));
+  });
+  filterProducts();
+});
+});
+
+productSearch.addEventListener("input",filterProducts);
+filterProducts();
+
+const orderForm=document.getElementById("orderForm");
+const cartLines=document.getElementById("cartLines");
+const cartEmpty=document.getElementById("cartEmpty");
+const submitOrder=document.getElementById("submitOrder");
+const checkoutStatus=document.getElementById("checkoutStatus");
+const paymentMethod=orderForm.elements.payment;
+const demoPaymentPreview=document.getElementById("demoPaymentPreview");
+const demoPaymentQr=document.getElementById("demoPaymentQr");
+const priceForm=document.getElementById("priceForm");
+const priceProduct=document.getElementById("priceProduct");
+const priceAmount=document.getElementById("priceAmount");
+const priceUnit=document.getElementById("priceUnit");
+const priceStatus=document.getElementById("priceStatus");
+const shopkeeperPanel=document.querySelector(".shopkeeper-panel");
+const priceUnlockForm=document.getElementById("priceUnlockForm");
+const shopkeeperPin=document.getElementById("shopkeeperPin");
+const unlockStatus=document.getElementById("unlockStatus");
+const priceLock=document.getElementById("priceLock");
+const priceManagement=document.getElementById("priceManagement");
+const shopkeeperPinHash="106341ed6691d80fa296bb3cee87190c154e6579e048716d28ab5e6a336814ae";
+
+async function hashShopkeeperPin(pin){
+if(!window.crypto || !window.crypto.subtle){
+  throw new Error("PIN verification is unavailable in this browser. Open the site in a current browser.");
+}
+const digest=await window.crypto.subtle.digest("SHA-256",new TextEncoder().encode(pin));
+return Array.from(new Uint8Array(digest),byte=>byte.toString(16).padStart(2,"0")).join("");
+}
+
+shopkeeperPanel.addEventListener("toggle",()=>{
+if(shopkeeperPanel.open){
+  if(priceLock.hidden){
+    shopkeeperPin.focus();
+  }
+  return;
+}
+
+priceManagement.hidden=true;
+priceLock.hidden=false;
+shopkeeperPin.value="";
+unlockStatus.textContent="";
+priceStatus.textContent="";
+});
+
+priceUnlockForm.addEventListener("submit",async event=>{
+event.preventDefault();
+if(!priceUnlockForm.reportValidity()){
+  return;
+}
+
+const unlockButton=priceUnlockForm.querySelector("button[type='submit']");
+unlockButton.disabled=true;
+unlockStatus.textContent="Checking PIN...";
+try{
+  const enteredHash=await hashShopkeeperPin(shopkeeperPin.value);
+  if(enteredHash!==shopkeeperPinHash){
+    unlockStatus.textContent="Incorrect PIN. Please try again.";
+    shopkeeperPin.value="";
+    shopkeeperPin.focus();
+    return;
+  }
+  priceLock.hidden=true;
+  priceManagement.hidden=false;
+  shopkeeperPin.value="";
+  priceStatus.textContent="";
+}catch(error){
+  unlockStatus.textContent=error.message;
+}finally{
+  unlockButton.disabled=false;
+}
+});
+
+const productPlaceholder=document.createElement("option");
+productPlaceholder.value="";
+productPlaceholder.textContent="Choose a product";
+priceProduct.appendChild(productPlaceholder);
+Object.entries(productsByCategory).forEach(([category,items])=>{
+  items.forEach(item=>{
+    const option=document.createElement("option");
+    option.value=productKey(item[0],category);
+    option.textContent=(category==="water" ? "Water" : category==="dairy" ? "Dairy" : "Vegetables")+" — "+item[0];
+    priceProduct.appendChild(option);
+  });
+});
+
+function formatRupees(amount){
+return "₹"+amount.toFixed(2).replace(/\.00$/,"");
+}
+
+function drawDemoPaymentQr(){
+const namespace="http://www.w3.org/2000/svg";
+const cellSize=10;
+const gridSize=29;
+const background=document.createElementNS(namespace,"rect");
+background.setAttribute("width","290");
+background.setAttribute("height","290");
+background.setAttribute("fill","#fff");
+demoPaymentQr.appendChild(background);
+
+function inFinder(x,y,left,top){
+const localX=x-left;
+const localY=y-top;
+if(localX<0 || localX>6 || localY<0 || localY>6){
+  return null;
+}
+return localX===0 || localX===6 || localY===0 || localY===6 ||
+  (localX>=2 && localX<=4 && localY>=2 && localY<=4);
+}
+
+for(let y=0;y<gridSize;y++){
+  for(let x=0;x<gridSize;x++){
+    const finder=inFinder(x,y,1,1) ??
+      inFinder(x,y,gridSize-8,1) ??
+      inFinder(x,y,1,gridSize-8);
+    const isDark=finder===null
+      ? ((x*17+y*31+x*y*7+11)%9)<4
+      : finder;
+    if(isDark){
+      const cell=document.createElementNS(namespace,"rect");
+      cell.setAttribute("x",String(x*cellSize));
+      cell.setAttribute("y",String(y*cellSize));
+      cell.setAttribute("width",String(cellSize));
+      cell.setAttribute("height",String(cellSize));
+      cell.setAttribute("fill","#193c23");
+      demoPaymentQr.appendChild(cell);
+    }
+  }
+}
+
+const demoLabel=document.createElementNS(namespace,"rect");
+demoLabel.setAttribute("x","86");
+demoLabel.setAttribute("y","119");
+demoLabel.setAttribute("width","118");
+demoLabel.setAttribute("height","52");
+demoLabel.setAttribute("rx","5");
+demoLabel.setAttribute("fill","#fff9e8");
+demoPaymentQr.appendChild(demoLabel);
+const demoText=document.createElementNS(namespace,"text");
+demoText.setAttribute("x","145");
+demoText.setAttribute("y","152");
+demoText.setAttribute("text-anchor","middle");
+demoText.setAttribute("font-family","Arial, sans-serif");
+demoText.setAttribute("font-size","22");
+demoText.setAttribute("font-weight","700");
+demoText.setAttribute("fill","#805b00");
+demoText.textContent="DEMO";
+demoPaymentQr.appendChild(demoText);
+}
+
+drawDemoPaymentQr();
+
+function updatePaymentPreview(){
+demoPaymentPreview.hidden=paymentMethod.value!=="UPI";
+}
+
+paymentMethod.addEventListener("change",updatePaymentPreview);
+updatePaymentPreview();
+
+function updateCart(){
+const selected=[...document.querySelectorAll(".product")].map(card=>{
+  const quantity=Number(card.querySelector("input").value);
+  return {
+    name:card.dataset.productName,
+    quantity:Number.isFinite(quantity) && quantity>0 ? quantity : 0,
+    price:card.dataset.price==="" ? null : Number(card.dataset.price),
+    rateUnit:card.dataset.unit,
+    quantityUnit:card.dataset.quantityUnit
+  };
+}).filter(item=>item.quantity>0);
+
+let subtotal=0;
+let hasUnpricedItems=false;
+cartLines.replaceChildren();
+selected.forEach(item=>{
+  const line=document.createElement("li");
+  const itemName=document.createElement("span");
+  const itemAmount=document.createElement("strong");
+  itemName.textContent=item.name+" × "+formatQuantity(item.quantity,item.quantityUnit);
+  if(item.price===null){
+    itemAmount.textContent="Price to be confirmed";
+    hasUnpricedItems=true;
+  }else{
+    const lineTotal=item.price*item.quantity;
+    subtotal+=lineTotal;
+    itemAmount.textContent=formatRupees(lineTotal);
+  }
+  line.append(itemName,itemAmount);
+  cartLines.appendChild(line);
+});
+
+cartEmpty.hidden=selected.length>0;
+submitOrder.disabled=selected.length===0;
+document.getElementById("subtotal").textContent=formatRupees(subtotal);
+
+const distance=orderForm.elements.distance.value;
+const deliveryAmount=document.getElementById("deliveryAmount");
+if(distance==="within"){
+  deliveryAmount.textContent="Free";
+}else if(distance==="beyond"){
+  deliveryAmount.textContent="To be confirmed by shopkeeper";
+}else{
+  deliveryAmount.textContent="Select delivery distance";
+}
+
+const total=document.getElementById("cartTotal");
+if(!selected.length){
+  total.textContent="Estimated total: ₹0";
+}else if(hasUnpricedItems || distance==="beyond" || !distance){
+  total.textContent="Final total: To be confirmed";
+}else{
+  total.textContent="Estimated total: "+formatRupees(subtotal);
+}
+document.getElementById("priceNotice").textContent=
+  hasUnpricedItems || distance==="beyond"
+    ? "This is an order request, not a confirmed order. The shopkeeper must confirm unpriced items, availability and any delivery charge before accepting it."
+    : "The shopkeeper will confirm stock and the final amount before accepting your order.";
+}
+
+orderForm.elements.distance.addEventListener("change",updateCart);
+
+priceProduct.addEventListener("change",()=>{
+const [category,...nameParts]=priceProduct.value.split("|");
+const productName=nameParts.join("|");
+const savedPrice=productPrices[priceProduct.value];
+if(!productName){
+  priceAmount.value="";
+  priceUnit.value="";
+  return;
+}
+
+const minimumPrice=minimumProductPrice(productName,category);
+priceAmount.min=String(minimumPrice);
+priceAmount.value=savedPrice ? String(savedPrice.price) : "";
+priceUnit.value=savedPrice
+  ? savedPrice.unit
+  : "per "+defaultProductUnit(productName,category);
+});
+
+priceForm.addEventListener("submit",event=>{
+event.preventDefault();
+if(!priceForm.reportValidity()){
+  return;
+}
+
+const [category,...nameParts]=priceProduct.value.split("|");
+const productName=nameParts.join("|");
+const amount=Number(priceAmount.value);
+const unit=priceUnit.value.trim();
+const minimumPrice=minimumProductPrice(productName,category);
+if(!knownProductKeys.has(priceProduct.value) || !Number.isFinite(amount) ||
+  amount<minimumPrice || !unit){
+  priceStatus.textContent="Enter a valid product price and unit. The 20 litre water jar must be at least ₹40, and milk must be at least ₹30.";
+  return;
+}
+
+const updatedPrices={
+  ...productPrices,
+  [priceProduct.value]:{price:amount,unit}
+};
+try{
+  localStorage.setItem(priceStorageKey,JSON.stringify(updatedPrices));
+}catch(error){
+  priceStatus.textContent="Could not save this price in the browser: "+error.message;
+  return;
+}
+
+productPrices=updatedPrices;
+document.querySelectorAll(".product").forEach(card=>{
+  if(card.dataset.category!==category || card.dataset.productName!==productName){
+    return;
+  }
+  const quantityUnit=quantityUnitFromPriceUnit(unit,productName,category);
+  card.dataset.price=String(amount);
+  card.dataset.unit=unit;
+  card.dataset.quantityUnit=quantityUnit;
+  card.querySelector(".price").textContent=formatRupees(amount);
+  card.querySelector(".unit").textContent=unit;
+  const quantity=card.querySelector("input");
+  quantity.step=["jar","bottle","packet","piece"].includes(quantityUnit) ? "1" : "any";
+  quantity.setAttribute("aria-label","Quantity of "+productName+" in "+quantityUnit);
+  const quantityLabel=card.querySelector(".quantity-label");
+  quantityLabel.firstChild.textContent="Quantity ("+quantityUnit+")";
+  card.querySelector(".note").textContent="Price set by shopkeeper";
+});
+updateCart();
+priceStatus.textContent="Price saved on this device. Customers using this browser will see it.";
+});
+
+orderForm.addEventListener("submit",event=>{
+event.preventDefault();
+if(!orderForm.reportValidity()){
+  return;
+}
+
+const selected=[...document.querySelectorAll(".product")].map(card=>({
+  name:card.dataset.productName,
+  quantity:Number(card.querySelector("input").value),
+  price:card.dataset.price==="" ? null : Number(card.dataset.price),
+  rateUnit:card.dataset.unit,
+  quantityUnit:card.dataset.quantityUnit
+})).filter(item=>item.quantity>0);
+if(!selected.length){
+  checkoutStatus.textContent="Add at least one product to your cart.";
+  return;
+}
+
+const formData=new FormData(orderForm);
+const distance=formData.get("distance")==="within"
+  ? "Within 3 km (free delivery)"
+  : "Beyond 3 km (delivery charge to be confirmed)";
+const orderText=[
+  "Jai Bhavani Vegetables & dairy online order request",
+  "Name: "+formData.get("name"),
+  "Mobile: "+formData.get("mobile"),
+  "Address: "+formData.get("address"),
+  "Delivery: "+distance,
+  "Payment preference: "+formData.get("payment"),
+  ...(formData.get("payment")==="UPI"
+    ? ["UPI demo preview selected. No payment has been made or verified."]
+    : []),
+  "Items:",
+  ...selected.map(item=>" - "+item.name+" × "+formatQuantity(item.quantity,item.quantityUnit)+
+    (item.price===null ? " (price to be confirmed)" :
+      " ("+formatRupees(item.price*item.quantity)+" at "+item.rateUnit+")")),
+  "Known items subtotal: "+document.getElementById("subtotal").textContent,
+  "Final amount and availability must be confirmed by the shopkeeper before the order is accepted."
+].join("\n");
+const whatsappUrl="https://wa.me/918766474170?text="+encodeURIComponent(orderText);
+const whatsappWindow=window.open(whatsappUrl,"_blank","noopener,noreferrer");
+checkoutStatus.replaceChildren();
+if(whatsappWindow){
+  checkoutStatus.textContent="WhatsApp opened with your order request. Review it and press Send to contact the shop.";
+}else{
+  checkoutStatus.append("Your browser blocked the WhatsApp window. ");
+  const whatsappLink=document.createElement("a");
+  whatsappLink.href=whatsappUrl;
+  whatsappLink.target="_blank";
+  whatsappLink.rel="noopener noreferrer";
+  whatsappLink.textContent="Open your order in WhatsApp";
+  checkoutStatus.appendChild(whatsappLink);
+}
+});
+
+updateCart();
+
+document.getElementById("shareShop").addEventListener("click",()=>{
+const website=window.location.protocol==="file:"
+  ? "Website: not published yet"
+  : "Website: "+window.location.href;
+const profile=[
+  "Jai Bhavani Vegetables & dairy",
+  "Global City, Virar West, Maharashtra – 401303",
+  "Contact: 8766474170",
+  website
+].join("\n");
+const shareUrl="https://wa.me/?text="+encodeURIComponent(profile);
+const shareStatus=document.getElementById("shareStatus");
+const shareWindow=window.open(shareUrl,"_blank","noopener,noreferrer");
+if(shareWindow){
+  shareStatus.textContent=window.location.protocol==="file:"
+    ? "WhatsApp opened. The website is not published yet, so this local page link cannot be shared with customers."
+    : "WhatsApp opened with the shop name, address, contact and website link.";
+}else{
+  shareStatus.replaceChildren();
+  shareStatus.append("Your browser blocked the share window. ");
+  const shareLink=document.createElement("a");
+  shareLink.href=shareUrl;
+  shareLink.target="_blank";
+  shareLink.rel="noopener noreferrer";
+  shareLink.textContent="Open WhatsApp share";
+  shareStatus.appendChild(shareLink);
+}
+});
+</script>
+
+</body>
+</html>
